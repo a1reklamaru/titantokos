@@ -992,14 +992,14 @@
 
     function renderChart(canvasId, rows, series, options = {}, hoverIndex = null) {
       const canvas = document.getElementById(canvasId);
-      const rect = canvas.parentElement.getBoundingClientRect();
+      const rect = canvas.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.max(320, Math.floor(rect.width * dpr));
-      canvas.height = Math.max(220, Math.floor(rect.height * dpr));
+      const width = Math.max(1, rect.width);
+      const height = Math.max(1, rect.height);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
       const ctx = canvas.getContext("2d");
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const width = canvas.width / dpr;
-      const height = canvas.height / dpr;
       ctx.clearRect(0, 0, width, height);
       if (!rows.length) { drawEmpty(ctx, width, height); return; }
       const padding = { top: 18, right: options.type === "dual" ? 48 : 18, bottom: 44, left: 58 };
