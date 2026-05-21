@@ -1,0 +1,1178 @@
+﻿<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Титан и Токос - дашборд динамики</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d2430;
+      --muted: #687386;
+      --line: #d9e1ea;
+      --panel: #ffffff;
+      --page: #f5f7fb;
+      --blue: #2364aa;
+      --teal: #008c8c;
+      --amber: #d28b00;
+      --rose: #bc4b51;
+      --green: #2e7d32;
+      --violet: #6654c8;
+      --soft: #edf3ff;
+      --shadow: 0 12px 30px rgba(23, 35, 52, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--page);
+    }
+
+    button, select { font: inherit; }
+
+    .app { min-height: 100vh; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 18px 28px;
+      background: rgba(255, 255, 255, 0.95);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 260px;
+    }
+
+    .brand-mark {
+      width: 164px;
+      max-width: 34vw;
+      height: auto;
+      display: block;
+    }
+
+    .brand-copy {
+      padding-left: 14px;
+      border-left: 1px solid #e7edf5;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .segmented {
+      display: inline-flex;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .segmented button {
+      min-width: 78px;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 0;
+      border-right: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .segmented button:last-child { border-right: 0; }
+
+    .segmented button.active {
+      background: linear-gradient(135deg, #4f82ef, #6a97f7);
+      color: #fff;
+    }
+
+    .select-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    select {
+      min-height: 38px;
+      padding: 7px 34px 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    main {
+      width: min(1480px, calc(100% - 36px));
+      margin: 22px auto 44px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(140px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .kpi {
+      min-height: 122px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .kpi:hover {
+      transform: translateY(-3px);
+      border-color: rgba(95, 143, 246, 0.42);
+      box-shadow: 0 18px 36px rgba(23, 35, 52, 0.12);
+    }
+
+    .kpi::before {
+      content: "";
+      display: block;
+      width: 34px;
+      height: 3px;
+      margin-bottom: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--amber), var(--blue));
+    }
+
+    .label { color: var(--muted); font-size: 13px; }
+    .value { margin-top: 10px; font-size: 26px; line-height: 1; font-weight: 750; }
+
+    .delta {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 650;
+      background: #eef3f7;
+      color: var(--muted);
+    }
+
+    .delta.good { background: #e7f4ea; color: var(--green); }
+    .delta.bad { background: #fae8e9; color: var(--rose); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel h2 { margin: 0; font-size: 16px; line-height: 1.25; }
+    .hint { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .chart-box { position: relative; height: 320px; padding: 8px 10px 14px; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 0 18px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    .summary .panel { position: static; }
+    .summary .side-chart {
+      position: static;
+      margin-top: 18px;
+    }
+    .summary .side-chart .chart-box { height: 260px; }
+    .note { padding: 18px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .note strong { color: var(--ink); }
+
+    .leaders-panel {
+      margin-bottom: 18px;
+    }
+
+    .leaders-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0;
+    }
+
+    .leader-list {
+      padding: 16px 18px 18px;
+    }
+
+    .leader-list + .leader-list {
+      border-left: 1px solid var(--line);
+    }
+
+    .leader-list h3 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .leader-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      padding: 10px 0;
+      border-top: 1px solid #edf1f6;
+    }
+
+    .leader-name {
+      min-width: 0;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 650;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .leader-meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .leader-value {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 750;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .insights-panel {
+      margin-bottom: 18px;
+    }
+
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      padding: 16px 18px 18px;
+    }
+
+    .insight-card {
+      min-height: 170px;
+      padding: 14px;
+      border: 1px solid #edf1f6;
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    .insight-card h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .insight-card p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .insight-card strong { color: var(--ink); }
+
+    .table-panel {
+      margin-top: 18px;
+      overflow: visible;
+      position: relative;
+    }
+
+    .table-panel .panel-header {
+      z-index: 8;
+      background: var(--panel);
+    }
+
+    .table-header-spacer {
+      display: none;
+    }
+
+    .table-panel .panel-header.is-floating,
+    .table-panel .panel-header.is-bottom {
+      box-shadow: 0 8px 18px rgba(23, 35, 52, 0.08);
+    }
+
+    .table-panel .panel-header.is-floating {
+      position: fixed;
+      z-index: 12;
+      border: 1px solid var(--line);
+      border-radius: 8px 8px 0 0;
+    }
+
+    .table-panel .panel-header.is-bottom {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    .table-wrap { overflow: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 980px; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid #edf1f6; text-align: right; font-size: 13px; white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--muted); background: #f9fbfd; font-weight: 700; }
+    .metric-header-float {
+      display: none;
+      overflow: hidden;
+      pointer-events: none;
+      background: #f9fbfd;
+      box-shadow: 0 8px 18px rgba(23, 35, 52, 0.08);
+    }
+    .metric-header-float.is-floating {
+      position: fixed;
+      z-index: 11;
+      border-left: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+    }
+    .metric-header-float table { table-layout: fixed; }
+    .metric-header-float th { box-sizing: border-box; }
+    tbody tr:hover { background: #f7fbff; }
+    .month-total-row {
+      cursor: pointer;
+      background: #fbfcfe;
+    }
+    .month-total-row td:first-child {
+      font-weight: 750;
+    }
+    .toggle-indicator {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 750;
+      vertical-align: middle;
+    }
+    .week-detail-row td {
+      background: #f8fbff;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .week-detail-row td:first-child {
+      padding-left: 50px;
+      color: var(--ink);
+      font-weight: 650;
+    }
+
+    .chart-tooltip {
+      position: fixed;
+      z-index: 20;
+      pointer-events: none;
+      display: none;
+      max-width: 260px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 16px 40px rgba(23, 35, 52, 0.18);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1180px) {
+      .kpi-grid { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+      .leaders-grid { grid-template-columns: 1fr; }
+      .insights-grid { grid-template-columns: 1fr; }
+      .leader-list + .leader-list { border-left: 0; border-top: 1px solid var(--line); }
+      .summary .panel { position: static; }
+    }
+
+    @media (max-width: 760px) {
+      .topbar { position: static; align-items: flex-start; flex-direction: column; padding: 16px; }
+      .brand { align-items: flex-start; flex-direction: column; }
+      .brand-copy { padding-left: 0; border-left: 0; }
+      .controls { justify-content: flex-start; width: 100%; }
+      .segmented { width: 100%; }
+      .segmented button { flex: 1; min-width: 0; }
+      .select-wrap { width: 100%; align-items: stretch; flex-direction: column; }
+      select { width: 100%; }
+      main { width: min(100% - 24px, 1480px); }
+      .kpi-grid, .chart-grid { grid-template-columns: 1fr; }
+      .chart-box { height: 280px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-mark" src="assets/a1-logo.png" alt="А1 Интернет Эксперт">
+        <div class="brand-copy">
+          <h1 id="clientTitle">Титан</h1>
+          <p>Динамика рекламных показателей по неделям и месяцам в Яндекс Директе</p>
+        </div>
+      </div>
+      <div class="controls" aria-label="Фильтры дашборда">
+        <div class="segmented" role="group" aria-label="Клиент">
+          <button class="active" type="button" data-client="titan">Титан</button>
+          <button type="button" data-client="tokos">Токос</button>
+        </div>
+        <div class="segmented" role="group" aria-label="Детализация">
+          <button class="active" type="button" data-mode="weekly">Недели</button>
+          <button type="button" data-mode="monthly">Месяцы</button>
+        </div>
+        <div class="segmented" role="group" aria-label="Период" id="yearButtons"></div>
+        <label class="select-wrap">
+          <span id="periodFilterLabel">Неделя</span>
+          <select id="weekFilter"><option value="all">Все недели</option></select>
+        </label>
+      </div>
+    </header>
+
+    <main>
+      <section class="kpi-grid" id="kpiGrid" aria-label="Ключевые показатели"></section>
+
+      <section class="layout">
+        <div class="chart-grid">
+          <article class="panel">
+            <div class="panel-header"><h2>Показы и клики</h2><span class="hint">линии</span></div>
+            <div class="chart-box"><canvas id="trafficChart"></canvas></div>
+            <div class="legend"><span><i class="swatch" style="background: var(--blue)"></i>Показы</span><span><i class="swatch" style="background: var(--teal)"></i>Клики</span></div>
+          </article>
+          <article class="panel">
+            <div class="panel-header"><h2>Расход</h2><span class="hint">столбцы</span></div>
+            <div class="chart-box"><canvas id="costChart"></canvas></div>
+          </article>
+          <article class="panel">
+            <div class="panel-header"><h2>CTR и CPC</h2><span class="hint">две шкалы</span></div>
+            <div class="chart-box"><canvas id="efficiencyChart"></canvas></div>
+            <div class="legend"><span><i class="swatch" style="background: var(--green)"></i>CTR</span><span><i class="swatch" style="background: var(--rose)"></i>CPC</span></div>
+          </article>
+          <article class="panel">
+            <div class="panel-header"><h2>Стоимость конверсии</h2><span class="hint">CPA</span></div>
+            <div class="chart-box"><canvas id="cpaChart"></canvas></div>
+          </article>
+        </div>
+        <aside class="summary">
+          <article class="panel">
+            <div class="panel-header"><h2>Выбранный период</h2><span class="hint" id="periodHint">сводка</span></div>
+            <div class="note" id="periodNote"></div>
+          </article>
+          <article class="panel side-chart">
+            <div class="panel-header"><h2>Конверсии</h2><span class="hint">динамика</span></div>
+            <div class="chart-box"><canvas id="conversionsChart"></canvas></div>
+          </article>
+        </aside>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-header"><h2 id="tableTitle">Данные по неделям</h2><span class="hint" id="rowCount"></span></div>
+        <div class="table-header-spacer" id="tableHeaderSpacer" aria-hidden="true"></div>
+        <div class="metric-header-float" id="metricHeaderFloat" aria-hidden="true">
+          <table>
+            <thead>
+              <tr id="metricHeaderFloatRow"></tr>
+            </thead>
+          </table>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th id="periodColumnTitle">Неделя</th><th>Показы</th><th>Клики</th><th>CTR</th><th>Расход</th><th>CPC</th><th>Конверсии</th><th>CPA</th>
+              </tr>
+            </thead>
+            <tbody id="dataRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel leaders-panel" aria-label="Эффективность кампаний">
+        <div class="panel-header">
+          <h2>Эффективные кампании</h2>
+          <span class="hint" id="leadersHint">по выбранному периоду</span>
+        </div>
+        <div class="leaders-grid">
+          <div class="leader-list">
+            <h3>Больше всего конверсий</h3>
+            <div id="topConversions"></div>
+          </div>
+          <div class="leader-list">
+            <h3>Лучшая стоимость конверсии</h3>
+            <div id="topCpa"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel insights-panel" aria-label="Выводы и рекомендации">
+        <div class="panel-header">
+          <h2>Выводы и рекомендации</h2>
+          <span class="hint" id="insightsHint">по месячному отчету</span>
+        </div>
+        <div class="insights-grid" id="monthlyInsights"></div>
+      </section>
+    </main>
+  </div>
+  <div class="chart-tooltip" id="chartTooltip" role="status" aria-live="polite"></div>
+
+  <script>
+    const clients = {"titan":{"weekly":[{"period":"24 - 30 марта","date":"2025-03-24","year":2025,"impressions":76336,"clicks":2681,"ctr":0.035121,"cost":52499.75,"cpc":19.58,"conversions":17,"cpa":3088.22},{"period":"31 марта - 6 апреля","date":"2025-03-31","year":2025,"impressions":86209,"clicks":4614,"ctr":0.053521,"cost":50479.5,"cpc":10.94,"conversions":13,"cpa":3883.04},{"period":"7 апреля - 13 апреля","date":"2025-04-07","year":2025,"impressions":64337,"clicks":1821,"ctr":0.028304,"cost":50185.81,"cpc":27.56,"conversions":20,"cpa":2509.29},{"period":"14 апреля - 20 апреля","date":"2025-04-14","year":2025,"impressions":46444,"clicks":1352,"ctr":0.02911,"cost":47152.1,"cpc":34.88,"conversions":16,"cpa":2947.01},{"period":"21 апреля - 27 апреля","date":"2025-04-21","year":2025,"impressions":76822,"clicks":1656,"ctr":0.021556,"cost":58828.19,"cpc":35.52,"conversions":11,"cpa":5348.02},{"period":"28 апреля - 4 мая","date":"2025-04-28","year":2025,"impressions":71364,"clicks":1502,"ctr":0.021047,"cost":64497.17,"cpc":42.94,"conversions":9,"cpa":7166.35},{"period":"5 мая - 11 мая","date":"2025-05-05","year":2025,"impressions":44077,"clicks":1559,"ctr":0.03537,"cost":54436.4,"cpc":34.92,"conversions":9,"cpa":6048.49},{"period":"12 мая - 18 мая","date":"2025-05-12","year":2025,"impressions":44682,"clicks":1539,"ctr":0.034443,"cost":60094.09,"cpc":39.05,"conversions":13,"cpa":4622.62},{"period":"19 мая - 25 мая","date":"2025-05-19","year":2025,"impressions":57708,"clicks":1869,"ctr":0.032387,"cost":61121.21,"cpc":32.7,"conversions":20,"cpa":3056.06},{"period":"25 мая - 1 июня","date":"2025-05-25","year":2025,"impressions":75791,"clicks":2211,"ctr":0.029172,"cost":56816.47,"cpc":25.7,"conversions":16,"cpa":3551.03},{"period":"1 - 8 июня","date":"2025-06-01","year":2025,"impressions":127044,"clicks":3801,"ctr":0.029919,"cost":57510.92,"cpc":15.13,"conversions":22,"cpa":2614.13},{"period":"9 - 15 июня","date":"2025-06-09","year":2025,"impressions":124216,"clicks":3956,"ctr":0.031848,"cost":63041.15,"cpc":15.94,"conversions":15,"cpa":4202.74},{"period":"16 - 22 июня","date":"2025-06-16","year":2025,"impressions":298256,"clicks":7766,"ctr":0.026038,"cost":55322.2,"cpc":7.12,"conversions":14,"cpa":3951.59},{"period":"23-29 июня","date":"2025-06-23","year":2025,"impressions":390396,"clicks":8297,"ctr":0.021253,"cost":56878.6,"cpc":6.86,"conversions":19,"cpa":2993.61},{"period":"30 июня - 6 июля","date":"2025-06-30","year":2025,"impressions":385920,"clicks":9583,"ctr":0.024832,"cost":60680.16,"cpc":6.33,"conversions":14,"cpa":4334.3},{"period":"7 июля - 13 июля","date":"2025-07-07","year":2025,"impressions":328450,"clicks":8337,"ctr":0.025383,"cost":60000.5,"cpc":7.2,"conversions":25,"cpa":2400.02},{"period":"14 июля - 20 июля","date":"2025-07-14","year":2025,"impressions":257608,"clicks":6007,"ctr":0.023318,"cost":58334.97,"cpc":9.71,"conversions":14,"cpa":4166.78},{"period":"21 июля - 27 июля","date":"2025-07-21","year":2025,"impressions":352569,"clicks":7540,"ctr":0.021386,"cost":57201.94,"cpc":7.59,"conversions":23,"cpa":2487.04},{"period":"28 июля - 3 августа","date":"2025-07-28","year":2025,"impressions":266588,"clicks":8325,"ctr":0.031228,"cost":62376.78,"cpc":7.49,"conversions":17,"cpa":3669.22},{"period":"4 августа - 10 августа","date":"2025-08-04","year":2025,"impressions":293588,"clicks":8227,"ctr":0.028022,"cost":62317.77,"cpc":7.57,"conversions":19,"cpa":3279.88},{"period":"11 августа - 17 августа","date":"2025-08-11","year":2025,"impressions":199399,"clicks":6798,"ctr":0.034092,"cost":62508.2,"cpc":9.2,"conversions":25,"cpa":2500.33},{"period":"18 августа - 24 августа","date":"2025-08-18","year":2025,"impressions":195690,"clicks":7506,"ctr":0.038357,"cost":60638.8,"cpc":8.08,"conversions":24,"cpa":2526.62},{"period":"25 августа - 31 августа","date":"2025-08-25","year":2025,"impressions":92306,"clicks":3889,"ctr":0.042132,"cost":66888,"cpc":17.2,"conversions":11,"cpa":6080.73},{"period":"1 - 7 сентября","date":"2025-09-01","year":2025,"impressions":159059,"clicks":5090,"ctr":0.032001,"cost":62112.22,"cpc":12.2,"conversions":18,"cpa":3450.68},{"period":"8 - 14 сентября","date":"2025-09-08","year":2025,"impressions":412303,"clicks":8924,"ctr":0.021644,"cost":61313.51,"cpc":6.87,"conversions":28,"cpa":2189.77},{"period":"15 - 21 сентября","date":"2025-09-15","year":2025,"impressions":361738,"clicks":8094,"ctr":0.022375,"cost":58630.86,"cpc":7.24,"conversions":9,"cpa":6514.54},{"period":"22 - 28 сентября","date":"2025-09-22","year":2025,"impressions":315112,"clicks":9126,"ctr":0.028961,"cost":62196.58,"cpc":6.82,"conversions":23,"cpa":2704.2},{"period":"29 сентября - 5 октября","date":"2025-09-29","year":2025,"impressions":324317,"clicks":10116,"ctr":0.031192,"cost":55811.42,"cpc":5.52,"conversions":9,"cpa":6201.27},{"period":"6 - 12 октября","date":"2025-10-06","year":2025,"impressions":258396,"clicks":9600,"ctr":0.037152,"cost":80221.7,"cpc":8.36,"conversions":15,"cpa":5348.11},{"period":"13 - 19 октября","date":"2025-10-13","year":2025,"impressions":139429,"clicks":3495,"ctr":0.025067,"cost":53961.27,"cpc":15.44,"conversions":10,"cpa":5396.13},{"period":"20 - 26 октября","date":"2025-10-20","year":2025,"impressions":601058,"clicks":13396,"ctr":0.022287,"cost":60128.23,"cpc":4.49,"conversions":10,"cpa":6012.82},{"period":"27 октября - 2 ноября","date":"2025-10-27","year":2025,"impressions":328908,"clicks":6276,"ctr":0.019081,"cost":53438.83,"cpc":8.51,"conversions":7,"cpa":7634.12},{"period":"3 ноября - 9 ноября","date":"2025-11-03","year":2025,"impressions":314361,"clicks":14046,"ctr":0.044681,"cost":59822.71,"cpc":4.26,"conversions":9,"cpa":6646.97},{"period":"10 - 16 ноября","date":"2025-11-10","year":2025,"impressions":256822,"clicks":14532,"ctr":0.056584,"cost":43373.91,"cpc":2.98,"conversions":11,"cpa":3943.08},{"period":"17 - 23 ноября","date":"2025-11-17","year":2025,"impressions":246751,"clicks":15951,"ctr":0.064644,"cost":42587.34,"cpc":2.67,"conversions":11,"cpa":3871.58},{"period":"24 - 30 ноября","date":"2025-11-24","year":2025,"impressions":194437,"clicks":18126,"ctr":0.093223,"cost":39887.88,"cpc":2.2,"conversions":11,"cpa":3626.17},{"period":"1 - 7 декабря","date":"2025-12-01","year":2025,"impressions":204409,"clicks":13285,"ctr":0.064992,"cost":22977.76,"cpc":1.73,"conversions":6,"cpa":3829.63},{"period":"8 - 14 декабря","date":"2025-12-08","year":2025,"impressions":145031,"clicks":6659,"ctr":0.045914,"cost":23520,"cpc":3.53,"conversions":7,"cpa":3360},{"period":"15 - 21 декабря","date":"2025-12-15","year":2025,"impressions":118958,"clicks":9653,"ctr":0.081146,"cost":22312.42,"cpc":2.31,"conversions":7,"cpa":3187.49},{"period":"22 - 28 декабря","date":"2025-12-22","year":2025,"impressions":24585,"clicks":3159,"ctr":0.128493,"cost":6013.6,"cpc":1.9,"conversions":6,"cpa":1002.27},{"period":"12 - 18 января","date":"2026-01-12","year":2026,"impressions":81325,"clicks":5755,"ctr":0.070765,"cost":8855.57,"cpc":1.54,"conversions":6,"cpa":1475.93},{"period":"19 - 25 января","date":"2026-01-19","year":2026,"impressions":208433,"clicks":10766,"ctr":0.051652,"cost":24347.63,"cpc":2.26,"conversions":12,"cpa":2028.97},{"period":"26 января - 1 февраля","date":"2026-01-26","year":2026,"impressions":227827,"clicks":8615,"ctr":0.037814,"cost":24400,"cpc":2.83,"conversions":12,"cpa":2033.33},{"period":"2 - 8 февраля","date":"2026-02-02","year":2026,"impressions":262289,"clicks":19506,"ctr":0.074368,"cost":24400,"cpc":1.25,"conversions":9,"cpa":2711.11},{"period":"9 - 15 февраля","date":"2026-02-09","year":2026,"impressions":254129,"clicks":11093,"ctr":0.043651,"cost":24400,"cpc":2.2,"conversions":11,"cpa":2218.18},{"period":"16 - 22 февраля","date":"2026-02-16","year":2026,"impressions":280310,"clicks":10820,"ctr":0.0386,"cost":24400,"cpc":2.26,"conversions":3,"cpa":8133.33},{"period":"23 февраля - 1 марта","date":"2026-02-23","year":2026,"impressions":240677,"clicks":13690,"ctr":0.056881,"cost":18889.05,"cpc":1.38,"conversions":5,"cpa":3777.81},{"period":"2 - 8 марта","date":"2026-03-02","year":2026,"impressions":402043,"clicks":13665,"ctr":0.033989,"cost":24400,"cpc":1.79,"conversions":2,"cpa":12200},{"period":"9 - 15 марта","date":"2026-03-09","year":2026,"impressions":237543,"clicks":8337,"ctr":0.035097,"cost":42334.74,"cpc":5.08,"conversions":5,"cpa":8466.95},{"period":"16 - 22 марта","date":"2026-03-16","year":2026,"impressions":282140,"clicks":3800,"ctr":0.013468,"cost":51567.87,"cpc":13.57,"conversions":7,"cpa":7366.84},{"period":"23 - 29 марта","date":"2026-03-23","year":2026,"impressions":346362,"clicks":7806,"ctr":0.022537,"cost":112506.22,"cpc":14.41,"conversions":18,"cpa":6250.35},{"period":"30 марта - 5 апреля","date":"2026-03-30","year":2026,"impressions":136590,"clicks":2711,"ctr":0.019848,"cost":58964.39,"cpc":21.75,"conversions":11,"cpa":5360.4},{"period":"6 - 12 апреля","date":"2026-04-06","year":2026,"impressions":114849,"clicks":2804,"ctr":0.024415,"cost":52904.74,"cpc":18.87,"conversions":15,"cpa":3526.98},{"period":"13 - 19 апреля","date":"2026-04-13","year":2026,"impressions":185461,"clicks":4351,"ctr":0.02346,"cost":64233.2,"cpc":14.76,"conversions":9,"cpa":7137.02},{"period":"20-26 апреля","date":"2026-04-20","year":2026,"impressions":77646,"clicks":1984,"ctr":0.025552,"cost":63929.71,"cpc":32.22,"conversions":15,"cpa":4261.98},{"period":"27 апреля - 3 мая (основной)","date":"2026-04-27","year":2026,"impressions":592318,"clicks":10068,"ctr":0.016998,"cost":100970.01,"cpc":10.03,"conversions":17,"cpa":5939.41},{"period":"4 - 10 мая (основной)","date":"2026-05-04","year":2026,"impressions":660993,"clicks":11339,"ctr":0.017154,"cost":109078.89,"cpc":9.62,"conversions":9,"cpa":12119.88},{"period":"11 - 17 мая (основной)","date":"2026-05-11","year":2026,"impressions":707975,"clicks":9522,"ctr":0.01345,"cost":109760.32,"cpc":11.53,"conversions":11,"cpa":9978.21}],"monthly":[{"period":"Март 2025","date":"2025-03-01","year":2025,"impressions":88651,"clicks":3338,"ctr":0.037653,"cost":59711.11,"cpc":17.89,"conversions":18,"cpa":3317.28},{"period":"Апрель 2025","date":"2025-04-01","year":2025,"impressions":292081,"clicks":9429,"ctr":0.032282,"cost":227075.89,"cpc":24.08,"conversions":62,"cpa":3662.51},{"period":"Май 2025","date":"2025-05-01","year":2025,"impressions":253568,"clicks":7764,"ctr":0.030619,"cost":262221.67,"cpc":33.77,"conversions":64,"cpa":4097.21},{"period":"Июнь 2025","date":"2025-06-01","year":2025,"impressions":995043,"clicks":25189,"ctr":0.025314,"cost":241421.46,"cpc":9.58,"conversions":72,"cpa":3353.08},{"period":"Июль 2025","date":"2025-07-01","year":2025,"impressions":1421752,"clicks":34855,"ctr":0.024516,"cost":263192.85,"cpc":7.55,"conversions":85,"cpa":3096.39},{"period":"Август 2025","date":"2025-08-01","year":2025,"impressions":895235,"clicks":29988,"ctr":0.033497,"cost":279085.68,"cpc":9.31,"conversions":85,"cpa":3283.36},{"period":"Сентябрь 2025","date":"2025-09-01","year":2025,"impressions":1340874,"clicks":34124,"ctr":0.025449,"cost":260199.28,"cpc":7.63,"conversions":81,"cpa":3212.34},{"period":"Октябрь 2025","date":"2025-10-01","year":2025,"impressions":1465472,"clicks":38200,"ctr":0.026067,"cost":272347.1,"cpc":7.13,"conversions":46,"cpa":5920.59},{"period":"Ноябрь 2025","date":"2025-11-01","year":2025,"impressions":1106705,"clicks":64471,"ctr":0.058255,"cost":202572.2,"cpc":3.14,"conversions":44,"cpa":4603.91},{"period":"Декабрь 2025","date":"2025-12-01","year":2025,"impressions":492983,"clicks":32756,"ctr":0.066444,"cost":74823.78,"cpc":2.28,"conversions":26,"cpa":2877.84},{"period":"Январь 2026","date":"2026-01-01","year":2026,"impressions":485039,"clicks":23906,"ctr":0.049287,"cost":54117.49,"cpc":2.26,"conversions":29,"cpa":1866.12},{"period":"Февраль 2026","date":"2026-02-01","year":2026,"impressions":1003023,"clicks":53154,"ctr":0.052994,"cost":89390.62,"cpc":1.68,"conversions":28,"cpa":3192.52},{"period":"Март 2026","date":"2026-03-01","year":2026,"impressions":1307113,"clicks":34383,"ctr":0.026305,"cost":247655.8,"cpc":7.2,"conversions":36,"cpa":6879.33},{"period":"Апрель 2026","date":"2026-04-01","year":2026,"impressions":813989,"clicks":16829,"ctr":0.020675,"cost":280882.21,"cpc":16.69,"conversions":57,"cpa":4927.76},{"period":"Май 2026","date":"2026-05-01","year":2026,"impressions":1698856,"clicks":28610,"ctr":0.016841,"cost":273766.12,"cpc":9.57,"conversions":27,"cpa":10139.49}],"campaignsWeekly":[{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-03-24","year":2025,"impressions":142,"clicks":36,"ctr":0.253521,"cost":5325.75,"cpc":147.94,"conversions":3,"cpa":1775.25},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-03-24","year":2025,"impressions":22741,"clicks":512,"ctr":0.022514,"cost":5707.95,"cpc":11.15,"conversions":1,"cpa":5707.95},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-03-24","year":2025,"impressions":1075,"clicks":103,"ctr":0.095814,"cost":16033.36,"cpc":155.66,"conversions":5,"cpa":3206.67},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2025-03-24","year":2025,"impressions":603,"clicks":79,"ctr":0.131012,"cost":10812.73,"cpc":136.87,"conversions":3,"cpa":3604.24},{"campaign":"ТИТАН Товарная кампания","date":"2025-03-24","year":2025,"impressions":51775,"clicks":1951,"ctr":0.037682,"cost":14619.96,"cpc":7.49,"conversions":5,"cpa":2923.99},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-03-31","year":2025,"impressions":124,"clicks":24,"ctr":0.193548,"cost":3134.14,"cpc":130.59,"conversions":2,"cpa":1567.07},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-03-31","year":2025,"impressions":23810,"clicks":822,"ctr":0.034523,"cost":5910.57,"cpc":7.19,"conversions":1,"cpa":5910.57},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-03-31","year":2025,"impressions":1074,"clicks":100,"ctr":0.09311,"cost":16585.77,"cpc":165.86,"conversions":5,"cpa":3317.15},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2025-03-31","year":2025,"impressions":753,"clicks":79,"ctr":0.104914,"cost":8142.49,"cpc":103.07,"conversions":1,"cpa":8142.49},{"campaign":"ТИТАН Товарная кампания","date":"2025-03-31","year":2025,"impressions":17307,"clicks":465,"ctr":0.026868,"cost":4071.18,"cpc":8.76,"conversions":2,"cpa":2035.59},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-03-31","year":2025,"impressions":43141,"clicks":3124,"ctr":0.072414,"cost":12635.35,"cpc":4.04,"conversions":2,"cpa":6317.68},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-04-07","year":2025,"impressions":171,"clicks":42,"ctr":0.245614,"cost":4421.99,"cpc":105.29,"conversions":2,"cpa":2211},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-04-07","year":2025,"impressions":22507,"clicks":651,"ctr":0.028924,"cost":6000,"cpc":9.22,"conversions":4,"cpa":1500},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-04-07","year":2025,"impressions":1336,"clicks":129,"ctr":0.096557,"cost":13169,"cpc":102.09,"conversions":7,"cpa":1881.29},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2025-04-07","year":2025,"impressions":851,"clicks":90,"ctr":0.105758,"cost":9057.66,"cpc":100.64,"conversions":3,"cpa":3019.22},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-04-07","year":2025,"impressions":39472,"clicks":909,"ctr":0.023029,"cost":17537.16,"cpc":19.29,"conversions":4,"cpa":4384.29},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-04-14","year":2025,"impressions":138,"clicks":34,"ctr":0.246377,"cost":3250.41,"cpc":95.6,"conversions":1,"cpa":3250.41},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-04-14","year":2025,"impressions":28263,"clicks":711,"ctr":0.025157,"cost":6000,"cpc":8.44,"conversions":1,"cpa":6000},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-04-14","year":2025,"impressions":1167,"clicks":132,"ctr":0.113111,"cost":14460.04,"cpc":109.55,"conversions":5,"cpa":2892.01},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2025-04-14","year":2025,"impressions":833,"clicks":111,"ctr":0.133253,"cost":10642.3,"cpc":95.88,"conversions":1,"cpa":10642.3},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-04-14","year":2025,"impressions":16043,"clicks":364,"ctr":0.022689,"cost":12799.35,"cpc":35.16,"conversions":8,"cpa":1599.92},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-04-21","year":2025,"impressions":182,"clicks":38,"ctr":0.208791,"cost":5018.56,"cpc":132.07,"conversions":2,"cpa":2509.28},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-04-21","year":2025,"impressions":31978,"clicks":453,"ctr":0.014166,"cost":6000,"cpc":13.25,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-04-21","year":2025,"impressions":1186,"clicks":105,"ctr":0.088533,"cost":16114.25,"cpc":153.47,"conversions":1,"cpa":16114.25},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2025-04-21","year":2025,"impressions":6,"clicks":0,"ctr":0,"cost":0,"cpc":0,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-04-21","year":2025,"impressions":2959,"clicks":194,"ctr":0.065563,"cost":13975.51,"cpc":72.04,"conversions":1,"cpa":13975.51},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-04-21","year":2025,"impressions":40511,"clicks":866,"ctr":0.021377,"cost":17719.87,"cpc":20.46,"conversions":7,"cpa":2531.41},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-04-28","year":2025,"impressions":204,"clicks":47,"ctr":0.230392,"cost":9031.18,"cpc":192.15,"conversions":1,"cpa":9031.18},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-04-28","year":2025,"impressions":28530,"clicks":414,"ctr":0.014511,"cost":6000,"cpc":14.49,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-04-28","year":2025,"impressions":869,"clicks":83,"ctr":0.095512,"cost":18000,"cpc":216.87,"conversions":1,"cpa":18000},{"campaign":"ЕПК Товарная кампания","date":"2025-04-28","year":2025,"impressions":2722,"clicks":199,"ctr":0.073108,"cost":13902.92,"cpc":69.86,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-04-28","year":2025,"impressions":39039,"clicks":759,"ctr":0.019442,"cost":17563.07,"cpc":23.14,"conversions":7,"cpa":2509.01},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-05-05","year":2025,"impressions":195,"clicks":36,"ctr":0.184615,"cost":6075.96,"cpc":168.78,"conversions":3,"cpa":2025.32},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-05-05","year":2025,"impressions":16351,"clicks":275,"ctr":0.016819,"cost":6000,"cpc":21.82,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-05-05","year":2025,"impressions":723,"clicks":66,"ctr":0.091286,"cost":6242.46,"cpc":94.58,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-05-05","year":2025,"impressions":3529,"clicks":324,"ctr":0.091811,"cost":18117.98,"cpc":55.92,"conversions":2,"cpa":9058.99},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-05-05","year":2025,"impressions":23279,"clicks":858,"ctr":0.036857,"cost":18000,"cpc":20.98,"conversions":4,"cpa":4500},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-05-12","year":2025,"impressions":303,"clicks":54,"ctr":0.178218,"cost":7740.78,"cpc":143.35,"conversions":2,"cpa":3870.39},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-05-12","year":2025,"impressions":17801,"clicks":211,"ctr":0.011853,"cost":6000,"cpc":28.44,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-05-12","year":2025,"impressions":1108,"clicks":111,"ctr":0.100181,"cost":12045.31,"cpc":108.52,"conversions":1,"cpa":12045.31},{"campaign":"ЕПК Товарная кампания","date":"2025-05-12","year":2025,"impressions":3081,"clicks":283,"ctr":0.091853,"cost":11910.42,"cpc":42.09,"conversions":3,"cpa":3970.14},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-05-12","year":2025,"impressions":22389,"clicks":880,"ctr":0.039305,"cost":22397.58,"cpc":25.45,"conversions":7,"cpa":3199.65},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-05-19","year":2025,"impressions":192,"clicks":48,"ctr":0.25,"cost":9608.75,"cpc":200.18,"conversions":6,"cpa":1601.46},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-05-19","year":2025,"impressions":18865,"clicks":298,"ctr":0.015796,"cost":6000,"cpc":20.13,"conversions":2,"cpa":3000},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-05-19","year":2025,"impressions":1079,"clicks":110,"ctr":0.101946,"cost":14143.67,"cpc":128.58,"conversions":3,"cpa":4714.56},{"campaign":"ЕПК Товарная кампания","date":"2025-05-19","year":2025,"impressions":2557,"clicks":153,"ctr":0.059836,"cost":9856.33,"cpc":64.42,"conversions":3,"cpa":3285.44},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-05-19","year":2025,"impressions":35015,"clicks":1260,"ctr":0.035985,"cost":21512.46,"cpc":17.07,"conversions":6,"cpa":3585.41},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-05-25","year":2025,"impressions":181,"clicks":35,"ctr":0.19337,"cost":4742.95,"cpc":135.51,"conversions":2,"cpa":2371.48},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-05-25","year":2025,"impressions":22983,"clicks":293,"ctr":0.012749,"cost":6000,"cpc":20.48,"conversions":2,"cpa":3000},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-05-25","year":2025,"impressions":967,"clicks":111,"ctr":0.114788,"cost":10942.98,"cpc":98.59,"conversions":4,"cpa":2735.74},{"campaign":"ЕПК Товарная кампания","date":"2025-05-25","year":2025,"impressions":2887,"clicks":190,"ctr":0.065812,"cost":13057.02,"cpc":68.72,"conversions":2,"cpa":6528.51},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-05-25","year":2025,"impressions":48773,"clicks":1582,"ctr":0.032436,"cost":22073.52,"cpc":13.95,"conversions":6,"cpa":3678.92},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-06-01","year":2025,"impressions":160,"clicks":41,"ctr":0.25625,"cost":7330.84,"cpc":178.8,"conversions":3,"cpa":2443.61},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-06-01","year":2025,"impressions":15561,"clicks":318,"ctr":0.020436,"cost":4617.63,"cpc":14.52,"conversions":1,"cpa":4617.63},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-06-01","year":2025,"impressions":943,"clicks":113,"ctr":0.11983,"cost":10045.62,"cpc":88.9,"conversions":7,"cpa":1435.09},{"campaign":"ЕПК Товарная кампания","date":"2025-06-01","year":2025,"impressions":3245,"clicks":232,"ctr":0.071495,"cost":12716.83,"cpc":54.81,"conversions":6,"cpa":2119.47},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-06-01","year":2025,"impressions":107135,"clicks":3097,"ctr":0.028907,"cost":22800,"cpc":7.36,"conversions":5,"cpa":4560},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-06-09","year":2025,"impressions":210,"clicks":59,"ctr":0.280952,"cost":13199.26,"cpc":223.72,"conversions":4,"cpa":3299.82},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-06-09","year":2025,"impressions":11516,"clicks":198,"ctr":0.017193,"cost":3375.76,"cpc":17.05,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-06-09","year":2025,"impressions":803,"clicks":68,"ctr":0.084682,"cost":7913.62,"cpc":116.38,"conversions":2,"cpa":3956.81},{"campaign":"ЕПК Товарная кампания","date":"2025-06-09","year":2025,"impressions":3265,"clicks":241,"ctr":0.073813,"cost":16086.38,"cpc":66.75,"conversions":4,"cpa":4021.6},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-06-09","year":2025,"impressions":108422,"clicks":3390,"ctr":0.031267,"cost":22466.13,"cpc":6.63,"conversions":5,"cpa":4493.23},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-06-16","year":2025,"impressions":184,"clicks":39,"ctr":0.211957,"cost":6347.64,"cpc":162.76,"conversions":1,"cpa":6347.64},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-06-16","year":2025,"impressions":15971,"clicks":166,"ctr":0.010394,"cost":3600,"cpc":21.69,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-06-16","year":2025,"impressions":986,"clicks":76,"ctr":0.077079,"cost":4812.02,"cpc":63.32,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-06-16","year":2025,"impressions":4107,"clicks":278,"ctr":0.067689,"cost":17769.11,"cpc":63.92,"conversions":7,"cpa":2538.44},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-06-16","year":2025,"impressions":277008,"clicks":7207,"ctr":0.026017,"cost":22793.43,"cpc":3.16,"conversions":6,"cpa":3798.9},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-06-23","year":2025,"impressions":218,"clicks":47,"ctr":0.215596,"cost":9502.52,"cpc":202.18,"conversions":1,"cpa":9502.52},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-06-23","year":2025,"impressions":20193,"clicks":282,"ctr":0.013965,"cost":3600,"cpc":12.77,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-06-23","year":2025,"impressions":968,"clicks":84,"ctr":0.086777,"cost":5894.41,"cpc":70.17,"conversions":3,"cpa":1964.8},{"campaign":"ЕПК Товарная кампания","date":"2025-06-23","year":2025,"impressions":3679,"clicks":224,"ctr":0.060886,"cost":15081.67,"cpc":67.33,"conversions":2,"cpa":7540.84},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-06-23","year":2025,"impressions":365338,"clicks":7660,"ctr":0.020967,"cost":22800,"cpc":2.98,"conversions":13,"cpa":1753.85},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-06-30","year":2025,"impressions":191,"clicks":48,"ctr":0.251309,"cost":10291.42,"cpc":214.4,"conversions":2,"cpa":5145.71},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-06-30","year":2025,"impressions":16264,"clicks":263,"ctr":0.016171,"cost":3600,"cpc":13.69,"conversions":1,"cpa":3600},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-06-30","year":2025,"impressions":872,"clicks":78,"ctr":0.08945,"cost":6967.75,"cpc":89.33,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-06-30","year":2025,"impressions":3117,"clicks":211,"ctr":0.067693,"cost":17024.06,"cpc":80.68,"conversions":4,"cpa":4256.02},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-06-30","year":2025,"impressions":365476,"clicks":8983,"ctr":0.024579,"cost":22796.93,"cpc":2.54,"conversions":7,"cpa":3256.7},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-07-07","year":2025,"impressions":2719,"clicks":178,"ctr":0.065465,"cost":15960.52,"cpc":89.67,"conversions":1,"cpa":15960.52},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-07-07","year":2025,"impressions":707,"clicks":58,"ctr":0.082037,"cost":6610.23,"cpc":113.97,"conversions":1,"cpa":6610.23},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-07-07","year":2025,"impressions":149,"clicks":41,"ctr":0.275168,"cost":11029.75,"cpc":269.02,"conversions":1,"cpa":11029.75},{"campaign":"ЕПК Товарная кампания","date":"2025-07-07","year":2025,"impressions":310813,"clicks":7793,"ctr":0.025073,"cost":22800,"cpc":2.93,"conversions":6,"cpa":3800},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-07-07","year":2025,"impressions":14062,"clicks":267,"ctr":0.018987,"cost":3600,"cpc":13.48,"conversions":16,"cpa":225},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-07-14","year":2025,"impressions":176,"clicks":41,"ctr":0.232955,"cost":9417.85,"cpc":229.7,"conversions":2,"cpa":4708.92},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-07-14","year":2025,"impressions":15946,"clicks":334,"ctr":0.020946,"cost":3477.89,"cpc":10.41,"conversions":1,"cpa":3477.89},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-07-14","year":2025,"impressions":1024,"clicks":94,"ctr":0.091797,"cost":11084.3,"cpc":117.92,"conversions":2,"cpa":5542.15},{"campaign":"ЕПК Товарная кампания","date":"2025-07-14","year":2025,"impressions":3117,"clicks":193,"ctr":0.061919,"cost":12824.98,"cpc":66.45,"conversions":1,"cpa":12824.98},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-07-14","year":2025,"impressions":237345,"clicks":5345,"ctr":0.02252,"cost":21529.95,"cpc":4.03,"conversions":8,"cpa":2691.24},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-07-21","year":2025,"impressions":204,"clicks":59,"ctr":0.289216,"cost":7082.77,"cpc":120.05,"conversions":5,"cpa":1416.55},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-07-21","year":2025,"impressions":21877,"clicks":477,"ctr":0.021804,"cost":3600,"cpc":7.55,"conversions":1,"cpa":3600},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-07-21","year":2025,"impressions":600,"clicks":65,"ctr":0.108333,"cost":9488.95,"cpc":145.98,"conversions":1,"cpa":9488.95},{"campaign":"ЕПК Товарная кампания","date":"2025-07-21","year":2025,"impressions":3116,"clicks":186,"ctr":0.059692,"cost":14511.05,"cpc":78.02,"conversions":4,"cpa":3627.76},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-07-21","year":2025,"impressions":326772,"clicks":6753,"ctr":0.020666,"cost":22519.17,"cpc":3.33,"conversions":12,"cpa":1876.6},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-07-28","year":2025,"impressions":145,"clicks":49,"ctr":0.337931,"cost":12193.9,"cpc":248.86,"conversions":3,"cpa":4064.63},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-07-28","year":2025,"impressions":27570,"clicks":694,"ctr":0.025172,"cost":3592.35,"cpc":5.18,"conversions":2,"cpa":1796.18},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-07-28","year":2025,"impressions":822,"clicks":83,"ctr":0.100973,"cost":7566.75,"cpc":91.17,"conversions":1,"cpa":7566.75},{"campaign":"ЕПК Товарная кампания","date":"2025-07-28","year":2025,"impressions":3055,"clicks":243,"ctr":0.079542,"cost":16368.3,"cpc":67.36,"conversions":3,"cpa":5456.1},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-07-28","year":2025,"impressions":234996,"clicks":7256,"ctr":0.030877,"cost":22655.48,"cpc":3.12,"conversions":8,"cpa":2831.94},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-08-04","year":2025,"impressions":184,"clicks":50,"ctr":0.271739,"cost":11937.51,"cpc":238.75,"conversions":1,"cpa":11937.51},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-08-04","year":2025,"impressions":25282,"clicks":661,"ctr":0.026145,"cost":3600,"cpc":5.45,"conversions":2,"cpa":1800},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-08-04","year":2025,"impressions":734,"clicks":75,"ctr":0.10218,"cost":6988.53,"cpc":93.18,"conversions":3,"cpa":2329.51},{"campaign":"ЕПК Товарная кампания","date":"2025-08-04","year":2025,"impressions":3229,"clicks":252,"ctr":0.078043,"cost":17011.47,"cpc":67.51,"conversions":5,"cpa":3402.29},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-08-04","year":2025,"impressions":264159,"clicks":7189,"ctr":0.027215,"cost":22780.26,"cpc":3.17,"conversions":8,"cpa":2847.53},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-08-11","year":2025,"impressions":225,"clicks":56,"ctr":0.248889,"cost":12111.49,"cpc":216.28,"conversions":4,"cpa":3027.87},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-08-11","year":2025,"impressions":28939,"clicks":945,"ctr":0.032655,"cost":3596.71,"cpc":3.81,"conversions":2,"cpa":1798.36},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-08-11","year":2025,"impressions":512,"clicks":51,"ctr":0.099609,"cost":6097.62,"cpc":119.56,"conversions":1,"cpa":6097.62},{"campaign":"ЕПК Товарная кампания","date":"2025-08-11","year":2025,"impressions":3689,"clicks":265,"ctr":0.071835,"cost":17902.38,"cpc":67.56,"conversions":5,"cpa":3580.48},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-08-11","year":2025,"impressions":166034,"clicks":5481,"ctr":0.033011,"cost":22800,"cpc":4.16,"conversions":13,"cpa":1753.85},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-08-18","year":2025,"impressions":197,"clicks":58,"ctr":0.294416,"cost":10364.23,"cpc":178.69,"conversions":5,"cpa":2072.85},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-08-18","year":2025,"impressions":31248,"clicks":906,"ctr":0.028994,"cost":3600,"cpc":3.97,"conversions":1,"cpa":3600},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-08-18","year":2025,"impressions":442,"clicks":51,"ctr":0.115385,"cost":3822.62,"cpc":74.95,"conversions":3,"cpa":1274.21},{"campaign":"ЕПК Товарная кампания","date":"2025-08-18","year":2025,"impressions":3824,"clicks":287,"ctr":0.075052,"cost":20051.95,"cpc":69.87,"conversions":6,"cpa":3341.99},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-08-18","year":2025,"impressions":159979,"clicks":6204,"ctr":0.03878,"cost":22800,"cpc":3.68,"conversions":9,"cpa":2533.33},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-08-25","year":2025,"impressions":207,"clicks":49,"ctr":0.236715,"cost":16563.24,"cpc":338.03,"conversions":3,"cpa":5521.08},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-08-25","year":2025,"impressions":21202,"clicks":734,"ctr":0.034619,"cost":3558.5,"cpc":4.85,"conversions":1,"cpa":3558.5},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-08-25","year":2025,"impressions":314,"clicks":31,"ctr":0.098726,"cost":4348.47,"cpc":140.27,"conversions":1,"cpa":4348.47},{"campaign":"ЕПК Товарная кампания","date":"2025-08-25","year":2025,"impressions":3738,"clicks":288,"ctr":0.077047,"cost":19651.53,"cpc":68.23,"conversions":1,"cpa":19651.53},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-08-25","year":2025,"impressions":66845,"clicks":2787,"ctr":0.041693,"cost":22766.26,"cpc":8.17,"conversions":5,"cpa":4553.25},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-09-01","year":2025,"impressions":25960,"clicks":971,"ctr":0.037404,"cost":3597.31,"cpc":3.7,"conversions":1,"cpa":3597.31},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-09-01","year":2025,"impressions":3118,"clicks":258,"ctr":0.082745,"cost":18886.04,"cpc":73.2,"conversions":2,"cpa":9443.02},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-09-01","year":2025,"impressions":291,"clicks":39,"ctr":0.134021,"cost":5113.96,"cpc":131.13,"conversions":2,"cpa":2556.98},{"campaign":"ЕПК Товарная кампания","date":"2025-09-01","year":2025,"impressions":256,"clicks":59,"ctr":0.230469,"cost":11778.36,"cpc":199.63,"conversions":3,"cpa":3926.12},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-09-01","year":2025,"impressions":129434,"clicks":3763,"ctr":0.029073,"cost":22736.55,"cpc":6.04,"conversions":10,"cpa":2273.65},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-09-08","year":2025,"impressions":198,"clicks":51,"ctr":0.257576,"cost":11454.21,"cpc":224.59,"conversions":2,"cpa":5727.1},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-09-08","year":2025,"impressions":22662,"clicks":1044,"ctr":0.046068,"cost":3599.23,"cpc":3.45,"conversions":1,"cpa":3599.23},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-09-08","year":2025,"impressions":294,"clicks":34,"ctr":0.115646,"cost":2670.63,"cpc":78.55,"conversions":2,"cpa":1335.32},{"campaign":"ЕПК Товарная кампания","date":"2025-09-08","year":2025,"impressions":3682,"clicks":301,"ctr":0.081749,"cost":20789.44,"cpc":69.07,"conversions":7,"cpa":2969.92},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-09-08","year":2025,"impressions":385467,"clicks":7494,"ctr":0.019441,"cost":22800,"cpc":3.04,"conversions":16,"cpa":1425},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-09-15","year":2025,"impressions":198,"clicks":47,"ctr":0.237374,"cost":8281.77,"cpc":176.21,"conversions":1,"cpa":8281.77},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-09-15","year":2025,"impressions":23369,"clicks":732,"ctr":0.031324,"cost":3549.09,"cpc":4.85,"conversions":1,"cpa":3549.09},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-09-15","year":2025,"impressions":210,"clicks":14,"ctr":0.066667,"cost":1411.1,"cpc":100.79,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-09-15","year":2025,"impressions":39741,"clicks":324,"ctr":0.008153,"cost":22588.9,"cpc":69.72,"conversions":2,"cpa":11294.45},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-09-15","year":2025,"impressions":298220,"clicks":6977,"ctr":0.023395,"cost":22800,"cpc":3.27,"conversions":5,"cpa":4560},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-09-22","year":2025,"impressions":201,"clicks":54,"ctr":0.268657,"cost":11799.33,"cpc":218.51,"conversions":2,"cpa":5899.66},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-09-22","year":2025,"impressions":20023,"clicks":780,"ctr":0.038955,"cost":3600,"cpc":4.62,"conversions":1,"cpa":3600},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-09-22","year":2025,"impressions":214,"clicks":20,"ctr":0.093458,"cost":3723.57,"cpc":186.18,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-09-22","year":2025,"impressions":4102,"clicks":344,"ctr":0.083862,"cost":20275.46,"cpc":58.94,"conversions":3,"cpa":6758.49},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-09-22","year":2025,"impressions":290572,"clicks":7928,"ctr":0.027284,"cost":22798.22,"cpc":2.88,"conversions":17,"cpa":1341.07},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-09-29","year":2025,"impressions":172,"clicks":41,"ctr":0.238372,"cost":6780.21,"cpc":165.37,"conversions":2,"cpa":3390.1},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-09-29","year":2025,"impressions":19961,"clicks":764,"ctr":0.038275,"cost":3600,"cpc":4.71,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-09-29","year":2025,"impressions":385,"clicks":43,"ctr":0.111688,"cost":5362.96,"cpc":124.72,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-09-29","year":2025,"impressions":3240,"clicks":286,"ctr":0.088272,"cost":18637.04,"cpc":65.16,"conversions":2,"cpa":9318.52},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-09-29","year":2025,"impressions":300559,"clicks":8982,"ctr":0.029884,"cost":21431.21,"cpc":2.39,"conversions":5,"cpa":4286.24},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-10-06","year":2025,"impressions":665,"clicks":70,"ctr":0.105263,"cost":6883.15,"cpc":98.33,"conversions":2,"cpa":3441.58},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-10-06","year":2025,"impressions":40115,"clicks":2158,"ctr":0.053795,"cost":20668.8,"cpc":9.58,"conversions":1,"cpa":20668.8},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-10-06","year":2025,"impressions":29102,"clicks":947,"ctr":0.032541,"cost":5084.04,"cpc":5.37,"conversions":1,"cpa":5084.04},{"campaign":"ЕПК Товарная кампания","date":"2025-10-06","year":2025,"impressions":1611,"clicks":164,"ctr":0.1018,"cost":14883.25,"cpc":90.75,"conversions":1,"cpa":14883.25},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-10-06","year":2025,"impressions":186903,"clicks":6261,"ctr":0.033499,"cost":32702.46,"cpc":5.22,"conversions":10,"cpa":3270.25},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-10-13","year":2025,"impressions":123,"clicks":34,"ctr":0.276423,"cost":6633.13,"cpc":195.09,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-10-13","year":2025,"impressions":13340,"clicks":593,"ctr":0.044453,"cost":3600,"cpc":6.07,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-10-13","year":2025,"impressions":809,"clicks":83,"ctr":0.102596,"cost":8427.11,"cpc":101.53,"conversions":1,"cpa":8427.11},{"campaign":"ЕПК Товарная кампания","date":"2025-10-13","year":2025,"impressions":108315,"clicks":1276,"ctr":0.01178,"cost":12501.03,"cpc":9.8,"conversions":1,"cpa":12501.03},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-10-13","year":2025,"impressions":16842,"clicks":1509,"ctr":0.089597,"cost":22800,"cpc":15.11,"conversions":8,"cpa":2850},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-10-20","year":2025,"impressions":159,"clicks":37,"ctr":0.232704,"cost":10017.75,"cpc":270.75,"conversions":1,"cpa":10017.75},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-10-20","year":2025,"impressions":10504,"clicks":584,"ctr":0.055598,"cost":3600,"cpc":6.16,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-10-20","year":2025,"impressions":196,"clicks":16,"ctr":0.081633,"cost":886.76,"cpc":55.42,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-10-20","year":2025,"impressions":541574,"clicks":9375,"ctr":0.017311,"cost":22823.72,"cpc":2.43,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-10-20","year":2025,"impressions":48625,"clicks":3384,"ctr":0.069594,"cost":22800,"cpc":6.74,"conversions":9,"cpa":2533.33},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-10-27","year":2025,"impressions":113,"clicks":36,"ctr":0.318584,"cost":9055.66,"cpc":251.55,"conversions":2,"cpa":4527.83},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-10-27","year":2025,"impressions":140287,"clicks":702,"ctr":0.005004,"cost":3600,"cpc":5.13,"conversions":1,"cpa":3600},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-10-27","year":2025,"impressions":689,"clicks":63,"ctr":0.091437,"cost":12108.5,"cpc":192.2,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-10-27","year":2025,"impressions":137020,"clicks":2041,"ctr":0.014896,"cost":6101.99,"cpc":2.99,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-10-27","year":2025,"impressions":50799,"clicks":3434,"ctr":0.0676,"cost":22572.68,"cpc":6.57,"conversions":4,"cpa":5643.17},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-11-03","year":2025,"impressions":126,"clicks":46,"ctr":0.365079,"cost":9843.41,"cpc":213.99,"conversions":1,"cpa":9843.41},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-11-03","year":2025,"impressions":20766,"clicks":770,"ctr":0.03708,"cost":4758.71,"cpc":6.18,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-11-03","year":2025,"impressions":572,"clicks":61,"ctr":0.106643,"cost":10409.54,"cpc":170.65,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-11-03","year":2025,"impressions":292897,"clicks":13169,"ctr":0.044961,"cost":34811.05,"cpc":2.64,"conversions":8,"cpa":4351.38},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-11-10","year":2025,"impressions":113,"clicks":25,"ctr":0.221239,"cost":4973.91,"cpc":198.96,"conversions":1,"cpa":4973.91},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-11-10","year":2025,"impressions":11089,"clicks":341,"ctr":0.030751,"cost":3600,"cpc":10.56,"conversions":1,"cpa":3600},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-11-10","year":2025,"impressions":245620,"clicks":14166,"ctr":0.057674,"cost":34800,"cpc":2.46,"conversions":9,"cpa":3866.67},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-11-17","year":2025,"impressions":120,"clicks":26,"ctr":0.216667,"cost":4187.34,"cpc":161.05,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-11-17","year":2025,"impressions":14346,"clicks":692,"ctr":0.048236,"cost":3600,"cpc":5.2,"conversions":1,"cpa":3600},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-11-17","year":2025,"impressions":232285,"clicks":15233,"ctr":0.065579,"cost":34800,"cpc":2.28,"conversions":10,"cpa":3480},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-11-24","year":2025,"impressions":50,"clicks":10,"ctr":0.2,"cost":3111.31,"cpc":311.13,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-11-24","year":2025,"impressions":10387,"clicks":538,"ctr":0.051796,"cost":1976.57,"cpc":3.67,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-11-24","year":2025,"impressions":184000,"clicks":17578,"ctr":0.095533,"cost":34800,"cpc":1.98,"conversions":11,"cpa":3163.64},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-12-01","year":2025,"impressions":204409,"clicks":13285,"ctr":0.064992,"cost":22977.76,"cpc":1.73,"conversions":6,"cpa":3829.63},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-12-08","year":2025,"impressions":145031,"clicks":6659,"ctr":0.045914,"cost":23520,"cpc":3.53,"conversions":7,"cpa":3360},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-12-15","year":2025,"impressions":118958,"clicks":9653,"ctr":0.081146,"cost":22312.42,"cpc":2.31,"conversions":7,"cpa":3187.49},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-12-22","year":2025,"impressions":24585,"clicks":3159,"ctr":0.128493,"cost":6013.6,"cpc":1.9,"conversions":6,"cpa":1002.27},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-01-12","year":2026,"impressions":81325,"clicks":5755,"ctr":0.070765,"cost":8855.57,"cpc":1.54,"conversions":6,"cpa":1475.93},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-01-19","year":2026,"impressions":208433,"clicks":10766,"ctr":0.051652,"cost":24347.63,"cpc":2.26,"conversions":12,"cpa":2028.97},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-01-26","year":2026,"impressions":227827,"clicks":8615,"ctr":0.037814,"cost":24400,"cpc":2.83,"conversions":12,"cpa":2033.33},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-02-02","year":2026,"impressions":262289,"clicks":19506,"ctr":0.074368,"cost":24400,"cpc":1.25,"conversions":9,"cpa":2711.11},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-02-09","year":2026,"impressions":254129,"clicks":11093,"ctr":0.043651,"cost":24400,"cpc":2.2,"conversions":11,"cpa":2218.18},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-02-16","year":2026,"impressions":280310,"clicks":10820,"ctr":0.0386,"cost":24400,"cpc":2.26,"conversions":3,"cpa":8133.33},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-02-23","year":2026,"impressions":240677,"clicks":13690,"ctr":0.056881,"cost":18889.05,"cpc":1.38,"conversions":5,"cpa":3777.81},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-03-02","year":2026,"impressions":402043,"clicks":13665,"ctr":0.033989,"cost":24400,"cpc":1.79,"conversions":2,"cpa":12200},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-03-09","year":2026,"impressions":19613,"clicks":732,"ctr":0.037322,"cost":4931.39,"cpc":6.74,"conversions":4,"cpa":1232.85},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-03-09","year":2026,"impressions":753,"clicks":106,"ctr":0.14077,"cost":13003.35,"cpc":122.67,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-03-09","year":2026,"impressions":217177,"clicks":7499,"ctr":0.034529,"cost":24400,"cpc":3.25,"conversions":1,"cpa":24400},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-03-16","year":2026,"impressions":17398,"clicks":674,"ctr":0.03874,"cost":6091.03,"cpc":9.04,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-03-16","year":2026,"impressions":667,"clicks":100,"ctr":0.149925,"cost":14640,"cpc":146.4,"conversions":4,"cpa":3660},{"campaign":"Мастер кампаний","date":"2026-03-16","year":2026,"impressions":73542,"clicks":846,"ctr":0.011504,"cost":12246.08,"cpc":14.48,"conversions":2,"cpa":6123.04},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-03-16","year":2026,"impressions":777,"clicks":56,"ctr":0.072072,"cost":251.5,"cpc":4.49,"conversions":0,"cpa":0},{"campaign":"Товарная кампания (ПЕРЕЗАПУСК)","date":"2026-03-16","year":2026,"impressions":189756,"clicks":2124,"ctr":0.011193,"cost":18339.26,"cpc":8.63,"conversions":1,"cpa":18339.26},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-03-23","year":2026,"impressions":122,"clicks":28,"ctr":0.229508,"cost":4200.28,"cpc":150.01,"conversions":1,"cpa":4200.28},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-03-23","year":2026,"impressions":30099,"clicks":742,"ctr":0.024652,"cost":9760,"cpc":13.15,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-03-23","year":2026,"impressions":1976,"clicks":273,"ctr":0.138158,"cost":31914.77,"cpc":116.9,"conversions":4,"cpa":7978.69},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2026-03-23","year":2026,"impressions":1509,"clicks":198,"ctr":0.131213,"cost":15995.27,"cpc":80.78,"conversions":2,"cpa":7997.64},{"campaign":"Мастер кампаний","date":"2026-03-23","year":2026,"impressions":63929,"clicks":1152,"ctr":0.01802,"cost":12026.37,"cpc":10.44,"conversions":2,"cpa":6013.18},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-03-23","year":2026,"impressions":248727,"clicks":5413,"ctr":0.021763,"cost":38609.53,"cpc":7.13,"conversions":9,"cpa":4289.95},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-03-30","year":2026,"impressions":200,"clicks":55,"ctr":0.275,"cost":8227.2,"cpc":149.59,"conversions":2,"cpa":4113.6},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-03-30","year":2026,"impressions":11945,"clicks":265,"ctr":0.022185,"cost":3135.89,"cpc":11.83,"conversions":1,"cpa":3135.89},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-03-30","year":2026,"impressions":1025,"clicks":131,"ctr":0.127805,"cost":20700.29,"cpc":158.02,"conversions":3,"cpa":6900.1},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2026-03-30","year":2026,"impressions":1321,"clicks":156,"ctr":0.118092,"cost":14552.06,"cpc":93.28,"conversions":2,"cpa":7276.03},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-03-30","year":2026,"impressions":122099,"clicks":2104,"ctr":0.017232,"cost":12348.95,"cpc":5.87,"conversions":3,"cpa":4116.32},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-04-06","year":2026,"impressions":253,"clicks":41,"ctr":0.162055,"cost":5456.15,"cpc":133.08,"conversions":3,"cpa":1818.72},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-04-06","year":2026,"impressions":7820,"clicks":156,"ctr":0.019949,"cost":2498.7,"cpc":16.02,"conversions":1,"cpa":2498.7},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-04-06","year":2026,"impressions":904,"clicks":120,"ctr":0.132743,"cost":18274.15,"cpc":152.28,"conversions":2,"cpa":9137.08},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2026-04-06","year":2026,"impressions":861,"clicks":99,"ctr":0.114983,"cost":12174.23,"cpc":122.97,"conversions":2,"cpa":6087.12},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-04-06","year":2026,"impressions":105011,"clicks":2388,"ctr":0.02274,"cost":14501.51,"cpc":6.07,"conversions":7,"cpa":2071.64},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-04-13","year":2026,"impressions":223,"clicks":0,"ctr":0,"cost":9500.09,"cpc":0,"conversions":1,"cpa":9500.09},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-04-13","year":2026,"impressions":10496,"clicks":155,"ctr":0.014768,"cost":3650.06,"cpc":23.55,"conversions":1,"cpa":3650.06},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-04-13","year":2026,"impressions":1005,"clicks":119,"ctr":0.118408,"cost":22969.66,"cpc":193.02,"conversions":4,"cpa":5742.42},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2026-04-13","year":2026,"impressions":407,"clicks":41,"ctr":0.100737,"cost":5547.35,"cpc":135.3,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-04-13","year":2026,"impressions":173330,"clicks":4036,"ctr":0.023285,"cost":22566.04,"cpc":5.59,"conversions":3,"cpa":7522.01},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-04-20","year":2026,"impressions":192,"clicks":57,"ctr":0.296875,"cost":11612.02,"cpc":203.72,"conversions":4,"cpa":2903},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-04-20","year":2026,"impressions":17666,"clicks":135,"ctr":0.007642,"cost":3600,"cpc":26.67,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-04-20","year":2026,"impressions":1139,"clicks":161,"ctr":0.141352,"cost":25604.47,"cpc":159.03,"conversions":3,"cpa":8534.82},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-04-20","year":2026,"impressions":58649,"clicks":1631,"ctr":0.02781,"cost":23113.22,"cpc":14.17,"conversions":8,"cpa":2889.15},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-04-27","year":2026,"impressions":200,"clicks":38,"ctr":0.19,"cost":8742.73,"cpc":230.07,"conversions":5,"cpa":1748.55},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-04-27","year":2026,"impressions":10795,"clicks":147,"ctr":0.013617,"cost":3660,"cpc":24.9,"conversions":1,"cpa":3660},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-04-27","year":2026,"impressions":801,"clicks":105,"ctr":0.131086,"cost":24071.53,"cpc":229.25,"conversions":1,"cpa":24071.53},{"campaign":"Мастер кампаний Титан (новый акк)","date":"2026-04-27","year":2026,"impressions":199465,"clicks":3039,"ctr":0.015236,"cost":19221.27,"cpc":6.32,"conversions":1,"cpa":19221.27},{"campaign":"Ретаргетинг Титан (новый акк)","date":"2026-04-27","year":2026,"impressions":15742,"clicks":610,"ctr":0.03875,"cost":3159.93,"cpc":5.18,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-04-27","year":2026,"impressions":94659,"clicks":2896,"ctr":0.030594,"cost":23180,"cpc":8,"conversions":7,"cpa":3311.43},{"campaign":"Товарная кампания ТИТАН (новый акк)","date":"2026-04-27","year":2026,"impressions":270656,"clicks":3233,"ctr":0.011945,"cost":18934.55,"cpc":5.86,"conversions":2,"cpa":9467.28},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-05-04","year":2026,"impressions":200,"clicks":41,"ctr":0.205,"cost":9047.87,"cpc":220.68,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-05-04","year":2026,"impressions":17972,"clicks":126,"ctr":0.007011,"cost":3660,"cpc":29.05,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-05-04","year":2026,"impressions":972,"clicks":120,"ctr":0.123457,"cost":24400,"cpc":203.33,"conversions":1,"cpa":24400},{"campaign":"Мастер кампаний Титан (новый акк)","date":"2026-05-04","year":2026,"impressions":170130,"clicks":3892,"ctr":0.022877,"cost":23048.11,"cpc":5.92,"conversions":2,"cpa":11524.06},{"campaign":"Ретаргетинг Титан (новый акк)","date":"2026-05-04","year":2026,"impressions":12882,"clicks":479,"ctr":0.037184,"cost":3660,"cpc":7.64,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-05-04","year":2026,"impressions":165051,"clicks":3437,"ctr":0.020824,"cost":23180,"cpc":6.74,"conversions":3,"cpa":7726.67},{"campaign":"Товарная кампания ТИТАН (новый акк)","date":"2026-05-04","year":2026,"impressions":293786,"clicks":3244,"ctr":0.011042,"cost":22082.91,"cpc":6.81,"conversions":3,"cpa":7360.97},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-05-11","year":2026,"impressions":165,"clicks":46,"ctr":0.278788,"cost":9988.89,"cpc":217.15,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-05-11","year":2026,"impressions":14977,"clicks":137,"ctr":0.009147,"cost":3660,"cpc":26.72,"conversions":1,"cpa":3660},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-05-11","year":2026,"impressions":1001,"clicks":123,"ctr":0.122877,"cost":24351.93,"cpc":197.98,"conversions":2,"cpa":12175.96},{"campaign":"Мастер кампаний Титан (новый акк)","date":"2026-05-11","year":2026,"impressions":177020,"clicks":2658,"ctr":0.015015,"cost":22009.86,"cpc":8.28,"conversions":2,"cpa":11004.93},{"campaign":"Ретаргетинг Титан (новый акк)","date":"2026-05-11","year":2026,"impressions":12407,"clicks":382,"ctr":0.030789,"cost":3660,"cpc":9.58,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-05-11","year":2026,"impressions":67767,"clicks":1462,"ctr":0.021574,"cost":23180,"cpc":15.85,"conversions":4,"cpa":5795},{"campaign":"Товарная кампания ТИТАН (новый акк)","date":"2026-05-11","year":2026,"impressions":434638,"clicks":4714,"ctr":0.010846,"cost":22909.64,"cpc":4.86,"conversions":2,"cpa":11454.82}],"campaignsMonthly":[{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-03-01","year":2025,"impressions":160,"clicks":39,"ctr":0.24375,"cost":5773.48,"cpc":148.04,"conversions":3,"cpa":1924.49},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-03-01","year":2025,"impressions":26142,"clicks":629,"ctr":0.024061,"cost":6552.32,"cpc":10.42,"conversions":1,"cpa":6552.32},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-03-01","year":2025,"impressions":1228,"clicks":117,"ctr":0.095277,"cost":18402.76,"cpc":157.29,"conversions":6,"cpa":3067.13},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2025-03-01","year":2025,"impressions":711,"clicks":90,"ctr":0.126582,"cost":11975.94,"cpc":133.07,"conversions":3,"cpa":3991.98},{"campaign":"ТИТАН Товарная кампания","date":"2025-03-01","year":2025,"impressions":54247,"clicks":2017,"ctr":0.037182,"cost":15201.56,"cpc":7.54,"conversions":5,"cpa":3040.31},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-03-01","year":2025,"impressions":6163,"clicks":446,"ctr":0.072367,"cost":1805.05,"cpc":4.05,"conversions":0,"cpa":0},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-04-01","year":2025,"impressions":684,"clicks":155,"ctr":0.226608,"cost":19247.88,"cpc":124.18,"conversions":7,"cpa":2749.70},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-04-01","year":2025,"impressions":115384,"clicks":2697,"ctr":0.023374,"cost":25637.63,"cpc":9.51,"conversions":6,"cpa":4272.94},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-04-01","year":2025,"impressions":4982,"clicks":488,"ctr":0.097953,"cost":65673.95,"cpc":134.58,"conversions":17,"cpa":3863.17},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2025-04-01","year":2025,"impressions":2335,"clicks":269,"ctr":0.115203,"cost":26679.24,"cpc":99.18,"conversions":5,"cpa":5335.85},{"campaign":"ЕПК Товарная кампания","date":"2025-04-01","year":2025,"impressions":4126,"clicks":279,"ctr":0.06762,"cost":19933.9,"cpc":71.45,"conversions":1,"cpa":19933.9},{"campaign":"ТИТАН Товарная кампания","date":"2025-04-01","year":2025,"impressions":14835,"clicks":399,"ctr":0.026896,"cost":3489.58,"cpc":8.75,"conversions":2,"cpa":1744.79},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-04-01","year":2025,"impressions":149735,"clicks":5142,"ctr":0.034341,"cost":66413.71,"cpc":12.92,"conversions":24,"cpa":2767.24},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-05-01","year":2025,"impressions":966,"clicks":196,"ctr":0.202899,"cost":32736.25,"cpc":167.02,"conversions":14,"cpa":2338.30},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-05-01","year":2025,"impressions":89431,"clicks":1278,"ctr":0.01429,"cost":26678.58,"cpc":20.88,"conversions":4,"cpa":6669.64},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-05-01","year":2025,"impressions":4254,"clicks":432,"ctr":0.101551,"cost":52292.26,"cpc":121.05,"conversions":9,"cpa":5810.25},{"campaign":"ЕПК Товарная кампания","date":"2025-05-01","year":2025,"impressions":13249,"clicks":1041,"ctr":0.078572,"cost":59254.16,"cpc":56.92,"conversions":10,"cpa":5925.42},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-05-01","year":2025,"impressions":145668,"clicks":4817,"ctr":0.033068,"cost":91260.42,"cpc":18.95,"conversions":27,"cpa":3380.02},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-06-01","year":2025,"impressions":799,"clicks":193,"ctr":0.241552,"cost":37850.46,"cpc":196.12,"conversions":9,"cpa":4205.61},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-06-01","year":2025,"impressions":65564,"clicks":1002,"ctr":0.015283,"cost":15707.68,"cpc":15.68,"conversions":1,"cpa":15707.68},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-06-01","year":2025,"impressions":3825,"clicks":352,"ctr":0.092026,"cost":29661.06,"cpc":84.26,"conversions":12,"cpa":2471.76},{"campaign":"ЕПК Товарная кампания","date":"2025-06-01","year":2025,"impressions":14741,"clicks":1005,"ctr":0.068177,"cost":64086,"cpc":63.77,"conversions":20,"cpa":3204.3},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-06-01","year":2025,"impressions":910114,"clicks":22637,"ctr":0.024873,"cost":94116.26,"cpc":4.16,"conversions":30,"cpa":3137.21},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-07-01","year":2025,"impressions":3346,"clicks":347,"ctr":0.103706,"cost":48250.3,"cpc":139.05,"conversions":12,"cpa":4020.86},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-07-01","year":2025,"impressions":68225,"clicks":1491,"ctr":0.021854,"cost":18826.6,"cpc":12.63,"conversions":5,"cpa":3765.32},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-07-01","year":2025,"impressions":2990,"clicks":314,"ctr":0.105017,"cost":41899.22,"cpc":133.44,"conversions":5,"cpa":8379.84},{"campaign":"ЕПК Товарная кампания","date":"2025-07-01","year":2025,"impressions":321464,"clicks":8492,"ctr":0.026417,"cost":74081.39,"cpc":8.72,"conversions":16,"cpa":4630.09},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-07-01","year":2025,"impressions":1025727,"clicks":24211,"ctr":0.023604,"cost":80135.34,"cpc":3.31,"conversions":47,"cpa":1705.01},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-08-01","year":2025,"impressions":875,"clicks":234,"ctr":0.26742899999999997,"cost":56202.43,"cpc":240.18,"conversions":14,"cpa":4014.46},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-08-01","year":2025,"impressions":118487,"clicks":3543,"ctr":0.029902,"cost":15894.79,"cpc":4.49,"conversions":7,"cpa":2270.68},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-08-01","year":2025,"impressions":2354,"clicks":244,"ctr":0.103653,"cost":24500.13,"cpc":100.41,"conversions":8,"cpa":3062.52},{"campaign":"ЕПК Товарная кампания","date":"2025-08-01","year":2025,"impressions":15789,"clicks":1196,"ctr":0.075749,"cost":81632.32,"cpc":68.25,"conversions":18,"cpa":4535.13},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-08-01","year":2025,"impressions":757730,"clicks":24771,"ctr":0.032691,"cost":100856.01,"cpc":4.07,"conversions":38,"cpa":2654.11},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-09-01","year":2025,"impressions":26606,"clicks":1135,"ctr":0.042659999999999997,"cost":37069.82,"cpc":32.66,"conversions":7,"cpa":5295.69},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-09-01","year":2025,"impressions":74875,"clicks":3032,"ctr":0.040494,"cost":30662.93,"cpc":10.11,"conversions":5,"cpa":6132.59},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-09-01","year":2025,"impressions":1119,"clicks":119,"ctr":0.106345,"cost":14451.53,"cpc":121.44,"conversions":4,"cpa":3612.88},{"campaign":"ЕПК Товарная кампания","date":"2025-09-01","year":2025,"impressions":48707,"clicks":1110,"ctr":0.022789,"cost":80757.03,"cpc":72.75,"conversions":16,"cpa":5047.31},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-09-01","year":2025,"impressions":1189567,"clicks":28728,"ctr":0.02415,"cost":97257.97,"cpc":3.39,"conversions":49,"cpa":1984.86},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-10-01","year":2025,"impressions":1151,"clicks":196,"ctr":0.170287,"cost":34845.37,"cpc":177.78,"conversions":5,"cpa":6969.07},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-10-01","year":2025,"impressions":178422,"clicks":4382,"ctr":0.02456,"cost":33011.66,"cpc":7.53,"conversions":2,"cpa":16505.83},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-10-01","year":2025,"impressions":30874,"clicks":1122,"ctr":0.036341,"cost":26877.53,"cpc":23.96,"conversions":2,"cpa":13438.76},{"campaign":"ЕПК Товарная кампания","date":"2025-10-01","year":2025,"impressions":751685,"clicks":12477,"ctr":0.016599,"cost":67878.73,"cpc":5.44,"conversions":3,"cpa":22626.24},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-10-01","year":2025,"impressions":503340,"clicks":20023,"ctr":0.03978,"cost":109733.81,"cpc":5.48,"conversions":34,"cpa":3227.46},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2025-11-01","year":2025,"impressions":441,"clicks":117,"ctr":0.265306,"cost":24703.3,"cpc":211.14,"conversions":3,"cpa":8234.43},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2025-11-01","year":2025,"impressions":96670,"clicks":2542,"ctr":0.026296,"cost":14963.85,"cpc":5.89,"conversions":2,"cpa":7481.92},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2025-11-01","year":2025,"impressions":769,"clicks":79,"ctr":0.102731,"cost":13869.11,"cpc":175.56,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-11-01","year":2025,"impressions":39509,"clicks":606,"ctr":0.015338,"cost":3375.55,"cpc":5.57,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-11-01","year":2025,"impressions":969316,"clicks":61127,"ctr":0.063062,"cost":145660.39,"cpc":2.38,"conversions":39,"cpa":3734.88},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2025-12-01","year":2025,"impressions":492983,"clicks":32756,"ctr":0.066444,"cost":74823.78,"cpc":2.28,"conversions":26,"cpa":2877.84},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-01-01","year":2026,"impressions":485039,"clicks":23906,"ctr":0.049287,"cost":54117.49,"cpc":2.26,"conversions":29,"cpa":1866.12},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-02-01","year":2026,"impressions":1003023,"clicks":53154,"ctr":0.052994,"cost":89390.62,"cpc":1.68,"conversions":28,"cpa":3192.52},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-03-01","year":2026,"impressions":179,"clicks":44,"ctr":0.24581,"cost":6550.91,"cpc":148.88,"conversions":2,"cpa":3275.46},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-03-01","year":2026,"impressions":70523,"clicks":2224,"ctr":0.031536,"cost":21678.39,"cpc":9.75,"conversions":4,"cpa":5419.60},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-03-01","year":2026,"impressions":3689,"clicks":516,"ctr":0.139875,"cost":65472.49,"cpc":126.88,"conversions":9,"cpa":7274.72},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2026-03-01","year":2026,"impressions":1886,"clicks":243,"ctr":0.128844,"cost":20153,"cpc":82.93,"conversions":3,"cpa":6717.67},{"campaign":"Мастер кампаний","date":"2026-03-01","year":2026,"impressions":137471,"clicks":1998,"ctr":0.014534,"cost":24272.45,"cpc":12.15,"conversions":4,"cpa":6068.11},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-03-01","year":2026,"impressions":903609,"clicks":27234,"ctr":0.030139,"cost":91189.3,"cpc":3.35,"conversions":13,"cpa":7014.56},{"campaign":"Товарная кампания (ПЕРЕЗАПУСК)","date":"2026-03-01","year":2026,"impressions":189756,"clicks":2124,"ctr":0.011193,"cost":18339.26,"cpc":8.63,"conversions":1,"cpa":18339.26},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-04-01","year":2026,"impressions":925,"clicks":159,"ctr":0.171892,"cost":37440.68,"cpc":235.48,"conversions":12,"cpa":3120.06},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-04-01","year":2026,"impressions":50683,"clicks":719,"ctr":0.014186,"cost":14080.11,"cpc":19.58,"conversions":4,"cpa":3520.03},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-04-01","year":2026,"impressions":4238,"clicks":554,"ctr":0.130722,"cost":95389.36,"cpc":172.18,"conversions":12,"cpa":7949.11},{"campaign":"titan-plastik.ru_Погреба_общие_МСК_ПОИСК","date":"2026-04-01","year":2026,"impressions":2212,"clicks":251,"ctr":0.113472,"cost":28115.91,"cpc":112.02,"conversions":3,"cpa":9371.97},{"campaign":"Мастер кампаний Титан (новый акк)","date":"2026-04-01","year":2026,"impressions":113980,"clicks":1737,"ctr":0.01524,"cost":10983.58,"cpc":6.32,"conversions":1,"cpa":10983.58},{"campaign":"Ретаргетинг Титан (новый акк)","date":"2026-04-01","year":2026,"impressions":8995,"clicks":349,"ctr":0.038799,"cost":1805.67,"cpc":5.17,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-04-01","year":2026,"impressions":478295,"clicks":11213,"ctr":0.023444,"cost":82247.16,"cpc":7.33,"conversions":24,"cpa":3426.96},{"campaign":"Товарная кампания ТИТАН (новый акк)","date":"2026-04-01","year":2026,"impressions":154661,"clicks":1847,"ctr":0.011942,"cost":10819.74,"cpc":5.86,"conversions":1,"cpa":10819.74},{"campaign":"titan-plastik.ru_Бренд_МСК_ПОИСК","date":"2026-05-01","year":2026,"impressions":473,"clicks":107,"ctr":0.226216,"cost":23376.5,"cpc":218.47,"conversions":2,"cpa":11688.25},{"campaign":"titan-plastik.ru_МСК_Ретаргетинг","date":"2026-05-01","year":2026,"impressions":40447,"clicks":362,"ctr":0.00895,"cost":9638.56,"cpc":26.63,"conversions":1,"cpa":9638.56},{"campaign":"titan-plastik.ru_Пластиковые_погреба_МСК_ПОИСК","date":"2026-05-01","year":2026,"impressions":2436,"clicks":301,"ctr":0.123563,"cost":60436.17,"cpc":200.78,"conversions":3,"cpa":20145.39},{"campaign":"Мастер кампаний Титан (новый акк)","date":"2026-05-01","year":2026,"impressions":432635,"clicks":7852,"ctr":0.018149,"cost":53295.66,"cpc":6.79,"conversions":4,"cpa":13323.92},{"campaign":"Ретаргетинг Титан (новый акк)","date":"2026-05-01","year":2026,"impressions":32036,"clicks":1122,"ctr":0.035023,"cost":8674.26,"cpc":7.73,"conversions":0,"cpa":0},{"campaign":"ТИТАН Товарная кампания (Новый фид)","date":"2026-05-01","year":2026,"impressions":346410,"clicks":9522,"ctr":0.027488,"cost":65237.61,"cpc":6.85,"conversions":11,"cpa":5930.69},{"campaign":"Товарная кампания ТИТАН (новый акк)","date":"2026-05-01","year":2026,"impressions":844419,"clicks":9344,"ctr":0.011066,"cost":53107.36,"cpc":5.68,"conversions":6,"cpa":8851.23}]},"tokos":{"weekly":[{"period":"24 - 30 марта","date":"2025-03-24","year":2025,"impressions":39033,"clicks":1144,"ctr":0.029309,"cost":23258.58,"cpc":20.33,"conversions":8,"cpa":2907.32},{"period":"31 марта - 6 апреля","date":"2025-03-31","year":2025,"impressions":87455,"clicks":1253,"ctr":0.014327,"cost":27998.96,"cpc":22.35,"conversions":12,"cpa":2333.25},{"period":"7 апреля - 13 апреля","date":"2025-04-07","year":2025,"impressions":22261,"clicks":511,"ctr":0.022955,"cost":27993.22,"cpc":54.78,"conversions":6,"cpa":4665.54},{"period":"14 апреля - 20 апреля","date":"2025-04-14","year":2025,"impressions":14560,"clicks":431,"ctr":0.029602,"cost":31839.89,"cpc":73.87,"conversions":16,"cpa":1989.99},{"period":"21 апреля - 27 апреля","date":"2025-04-21","year":2025,"impressions":17194,"clicks":483,"ctr":0.028091,"cost":37788.88,"cpc":78.24,"conversions":18,"cpa":2099.38},{"period":"28 апреля - 4 мая","date":"2025-04-28","year":2025,"impressions":14860,"clicks":412,"ctr":0.027725,"cost":37799.99,"cpc":91.75,"conversions":15,"cpa":2520},{"period":"5 мая - 11 мая","date":"2025-05-05","year":2025,"impressions":13550,"clicks":433,"ctr":0.031956,"cost":37792.26,"cpc":87.28,"conversions":10,"cpa":3779.23},{"period":"12 мая - 18 мая","date":"2025-05-12","year":2025,"impressions":28850,"clicks":1105,"ctr":0.038302,"cost":37798.52,"cpc":34.21,"conversions":12,"cpa":3149.88},{"period":"19 мая - 25 мая","date":"2025-05-19","year":2025,"impressions":118353,"clicks":3975,"ctr":0.033586,"cost":37800,"cpc":9.51,"conversions":13,"cpa":2907.69},{"period":"26 мая - 1 июня","date":"2025-05-26","year":2025,"impressions":142580,"clicks":3457,"ctr":0.024246,"cost":37799.46,"cpc":10.93,"conversions":11,"cpa":3436.31},{"period":"2 - 8 июня","date":"2025-06-02","year":2025,"impressions":129311,"clicks":3009,"ctr":0.023269,"cost":37800,"cpc":12.56,"conversions":10,"cpa":3780},{"period":"9 - 15 июня","date":"2025-06-09","year":2025,"impressions":91192,"clicks":2267,"ctr":0.02486,"cost":37798.86,"cpc":16.67,"conversions":4,"cpa":9449.72},{"period":"16 - 22 июня","date":"2025-06-16","year":2025,"impressions":67243,"clicks":1767,"ctr":0.026278,"cost":54599.54,"cpc":30.9,"conversions":12,"cpa":4549.96},{"period":"23-29 июня","date":"2025-06-23","year":2025,"impressions":123337,"clicks":2653,"ctr":0.02151,"cost":54600,"cpc":20.58,"conversions":16,"cpa":3412.5},{"period":"30 июня - 6 июля","date":"2025-06-30","year":2025,"impressions":160026,"clicks":3184,"ctr":0.019897,"cost":54600,"cpc":17.15,"conversions":10,"cpa":5460},{"period":"7 июля - 13 июля","date":"2025-07-07","year":2025,"impressions":126312,"clicks":2514,"ctr":0.019903,"cost":54600,"cpc":21.72,"conversions":13,"cpa":4200},{"period":"14 июля - 20 июля","date":"2025-07-14","year":2025,"impressions":159854,"clicks":3792,"ctr":0.023722,"cost":54599.99,"cpc":14.4,"conversions":19,"cpa":2873.68},{"period":"21 июля - 27 июля","date":"2025-07-21","year":2025,"impressions":107764,"clicks":2744,"ctr":0.025463,"cost":54600,"cpc":19.9,"conversions":16,"cpa":3412.5},{"period":"28 июля - 3 августа","date":"2025-07-28","year":2025,"impressions":85357,"clicks":2236,"ctr":0.026196,"cost":54600,"cpc":24.42,"conversions":19,"cpa":2873.68},{"period":"4 августа - 10 августа","date":"2025-08-04","year":2025,"impressions":77875,"clicks":2206,"ctr":0.028327,"cost":54600.01,"cpc":24.75,"conversions":23,"cpa":2373.91},{"period":"11 августа - 17 августа","date":"2025-08-11","year":2025,"impressions":65069,"clicks":1850,"ctr":0.028431,"cost":54600,"cpc":29.51,"conversions":25,"cpa":2184},{"period":"18 августа - 24 августа","date":"2025-08-18","year":2025,"impressions":68867,"clicks":2165,"ctr":0.031437,"cost":54600,"cpc":25.22,"conversions":17,"cpa":3211.76},{"period":"25 августа - 31 августа","date":"2025-08-25","year":2025,"impressions":60890,"clicks":1743,"ctr":0.028625,"cost":54600,"cpc":31.33,"conversions":19,"cpa":2873.68},{"period":"1 - 7 сентября","date":"2025-09-01","year":2025,"impressions":65983,"clicks":1832,"ctr":0.027765,"cost":54600,"cpc":29.8,"conversions":24,"cpa":2275},{"period":"8 - 14 сентября","date":"2025-09-08","year":2025,"impressions":98963,"clicks":3201,"ctr":0.032345,"cost":54589.94,"cpc":17.05,"conversions":29,"cpa":1882.41},{"period":"15 - 21 сентября","date":"2025-09-15","year":2025,"impressions":84582,"clicks":3149,"ctr":0.03723,"cost":54600,"cpc":17.34,"conversions":33,"cpa":1654.55},{"period":"22 - 28 сентября","date":"2025-09-22","year":2025,"impressions":127470,"clicks":4206,"ctr":0.032996,"cost":54600,"cpc":12.98,"conversions":15,"cpa":3640},{"period":"29 сентября - 5 октября","date":"2025-09-29","year":2025,"impressions":113625,"clicks":3625,"ctr":0.031903,"cost":54599.99,"cpc":15.06,"conversions":18,"cpa":3033.33},{"period":"6 - 12 октября","date":"2025-10-06","year":2025,"impressions":235258,"clicks":10720,"ctr":0.045567,"cost":49696.31,"cpc":4.64,"conversions":5,"cpa":9939.26},{"period":"13 - 19 октября","date":"2025-10-13","year":2025,"impressions":61516,"clicks":4416,"ctr":0.071786,"cost":46846.29,"cpc":10.61,"conversions":12,"cpa":3903.86},{"period":"20 - 26 октября","date":"2025-10-20","year":2025,"impressions":97137,"clicks":5733,"ctr":0.05902,"cost":49665.22,"cpc":8.66,"conversions":12,"cpa":4138.77},{"period":"27 октября - 2 ноября","date":"2025-10-27","year":2025,"impressions":162243,"clicks":9628,"ctr":0.059343,"cost":40057.5,"cpc":4.16,"conversions":9,"cpa":4450.83},{"period":"3 - 9 ноября","date":"2025-11-03","year":2025,"impressions":23086,"clicks":9669,"ctr":0.418825,"cost":54262.77,"cpc":5.61,"conversions":8,"cpa":6782.85},{"period":"10 - 16 ноября","date":"2025-11-10","year":2025,"impressions":155260,"clicks":7629,"ctr":0.049137,"cost":40800,"cpc":5.35,"conversions":14,"cpa":2914.29},{"period":"17 - 23 ноября","date":"2025-11-17","year":2025,"impressions":184306,"clicks":9411,"ctr":0.051062,"cost":40605.33,"cpc":4.31,"conversions":6,"cpa":6767.56},{"period":"24 - 30 ноября","date":"2025-11-24","year":2025,"impressions":219347,"clicks":6975,"ctr":0.031799,"cost":40800,"cpc":5.85,"conversions":9,"cpa":4533.33},{"period":"1 - 7 декабря","date":"2025-12-01","year":2025,"impressions":318476,"clicks":8455,"ctr":0.026548,"cost":40800,"cpc":4.83,"conversions":10,"cpa":4080},{"period":"8- 14 декабря","date":"2025-12-08","year":2025,"impressions":144585,"clicks":2139,"ctr":0.014794,"cost":24392.24,"cpc":11.4,"conversions":4,"cpa":6098.06},{"period":"15 - 21 декабря","date":"2025-12-15","year":2025,"impressions":133430,"clicks":4344,"ctr":0.032556,"cost":22361.18,"cpc":5.15,"conversions":2,"cpa":11180.59},{"period":"22- 28 декабря","date":"2025-12-22","year":2025,"impressions":166617,"clicks":2795,"ctr":0.016775,"cost":21842.83,"cpc":7.81,"conversions":6,"cpa":3640.47},{"period":"12 - 18 января","date":"2026-01-12","year":2026,"impressions":85157,"clicks":1525,"ctr":0.017908,"cost":18226.63,"cpc":11.95,"conversions":8,"cpa":2278.33},{"period":"19 - 25 января","date":"2026-01-19","year":2026,"impressions":18994,"clicks":714,"ctr":0.037591,"cost":18046.15,"cpc":25.27,"conversions":7,"cpa":2578.02},{"period":"26 января - 1 февраля","date":"2026-01-26","year":2026,"impressions":66850,"clicks":1094,"ctr":0.016365,"cost":18277.19,"cpc":16.71,"conversions":8,"cpa":2284.65},{"period":"2 - 8 февраля","date":"2026-02-02","year":2026,"impressions":24511,"clicks":787,"ctr":0.032108,"cost":17971.2,"cpc":22.84,"conversions":6,"cpa":2995.2},{"period":"9 - 15 февраля","date":"2026-02-09","year":2026,"impressions":15696,"clicks":561,"ctr":0.035742,"cost":18036.64,"cpc":32.15,"conversions":7,"cpa":2576.66},{"period":"16 - 22 февраля","date":"2026-02-16","year":2026,"impressions":15203,"clicks":979,"ctr":0.064395,"cost":24656.08,"cpc":25.18,"conversions":10,"cpa":2465.61},{"period":"23 февраля - 1 марта","date":"2026-02-23","year":2026,"impressions":14002,"clicks":679,"ctr":0.048493,"cost":19857.57,"cpc":29.25,"conversions":5,"cpa":3971.51},{"period":"2 - 8 марта","date":"2026-03-02","year":2026,"impressions":31052,"clicks":692,"ctr":0.022285,"cost":24185.97,"cpc":34.95,"conversions":8,"cpa":3023.25},{"period":"9 - 15 марта","date":"2026-03-09","year":2026,"impressions":52110,"clicks":1370,"ctr":0.026291,"cost":29616.84,"cpc":21.62,"conversions":2,"cpa":14808.42},{"period":"16 - 22 марта","date":"2026-03-16","year":2026,"impressions":118637,"clicks":1821,"ctr":0.015349,"cost":35440.57,"cpc":19.46,"conversions":22,"cpa":1610.94},{"period":"23 - 29 марта","date":"2026-03-23","year":2026,"impressions":88128,"clicks":2538,"ctr":0.028799,"cost":37652.03,"cpc":14.84,"conversions":24,"cpa":1568.83},{"period":"30 марта - 5 апреля","date":"2026-03-30","year":2026,"impressions":276314,"clicks":4640,"ctr":0.016792,"cost":33328.91,"cpc":7.18,"conversions":22,"cpa":1514.95},{"period":"6 - 12 апреля","date":"2026-04-06","year":2026,"impressions":219742,"clicks":3608,"ctr":0.016419,"cost":25545.06,"cpc":7.08,"conversions":13,"cpa":1965},{"period":"13 - 19 апреля","date":"2026-04-13","year":2026,"impressions":261846,"clicks":4239,"ctr":0.016189,"cost":44281.11,"cpc":10.45,"conversions":25,"cpa":1771.24},{"period":"20-26 апреля","date":"2026-04-20","year":2026,"impressions":315674,"clicks":5385,"ctr":0.017059,"cost":46886.03,"cpc":8.71,"conversions":22,"cpa":2131.18},{"period":"27 апреля - 3 мая","date":"2026-04-27","year":2026,"impressions":350063,"clicks":7949,"ctr":0.022707,"cost":47637.5,"cpc":5.99,"conversions":14,"cpa":3402.68},{"period":"4 - 10 мая","date":"2026-05-04","year":2026,"impressions":238206,"clicks":3416,"ctr":0.014341,"cost":44173.24,"cpc":12.93,"conversions":11,"cpa":4015.75},{"period":"11 - 17 мая","date":"2026-05-11","year":2026,"impressions":222230,"clicks":1920,"ctr":0.00864,"cost":49677.45,"cpc":25.87,"conversions":17,"cpa":2922.2}],"monthly":[{"period":"Март 2025","date":"2025-03-01","year":2025,"impressions":51527,"clicks":1322,"ctr":0.025656,"cost":27258.43,"cpc":20.62,"conversions":9,"cpa":3028.71},{"period":"Апрель 2025","date":"2025-04-01","year":2025,"impressions":135345,"clicks":2677,"ctr":0.019779,"cost":137821.09,"cpc":51.48,"conversions":57,"cpa":2417.91},{"period":"Май 2025","date":"2025-05-01","year":2025,"impressions":291457,"clicks":8714,"ctr":0.029898,"cost":167390.35,"cpc":19.21,"conversions":54,"cpa":3099.82},{"period":"Июнь 2025","date":"2025-06-01","year":2025,"impressions":433944,"clicks":10151,"ctr":0.023392,"cost":192598.41,"cpc":18.97,"conversions":43,"cpa":4479.03},{"period":"Июль 2025","date":"2025-07-01","year":2025,"impressions":579870,"clicks":13056,"ctr":0.022515,"cost":241799.98,"cpc":18.52,"conversions":68,"cpa":3555.88},{"period":"Август 2025","date":"2025-08-01","year":2025,"impressions":309283,"clicks":8923,"ctr":0.028851,"cost":241800.01,"cpc":27.1,"conversions":92,"cpa":2628.26},{"period":"Сентябрь 2025","date":"2025-09-01","year":2025,"impressions":409461,"clicks":13423,"ctr":0.032782,"cost":233989.94,"cpc":17.43,"conversions":106,"cpa":2207.45},{"period":"Октябрь 2025","date":"2025-10-01","year":2025,"impressions":590961,"clicks":30337,"ctr":0.051335,"cost":213820.31,"cpc":7.05,"conversions":48,"cpa":4454.59},{"period":"Ноябрь 2025","date":"2025-11-01","year":2025,"impressions":628546,"clicks":36454,"ctr":0.057997,"cost":190765.11,"cpc":5.23,"conversions":40,"cpa":4769.13},{"period":"Декабрь 2025","date":"2025-12-01","year":2025,"impressions":763108,"clicks":17733,"ctr":0.023238,"cost":109396.25,"cpc":6.17,"conversions":22,"cpa":4972.56},{"period":"Январь 2026","date":"2026-01-01","year":2026,"impressions":161452,"clicks":3177,"ctr":0.019678,"cost":51938.95,"cpc":16.35,"conversions":22,"cpa":2360.86},{"period":"Февраль 2026","date":"2026-02-01","year":2026,"impressions":67412,"clicks":2910,"ctr":0.043167,"cost":77684.7,"cpc":26.7,"conversions":28,"cpa":2774.45},{"period":"Март 2026","date":"2026-03-01","year":2026,"impressions":399610,"clicks":8459,"ctr":0.021168,"cost":143895.84,"cpc":17.01,"conversions":64,"cpa":2248.37},{"period":"Апрель 2026","date":"2026-04-01","year":2026,"impressions":1194666,"clicks":21089,"ctr":0.017653,"cost":167739.99,"cpc":7.95,"conversions":84,"cpa":1996.9},{"period":"Май 2026","date":"2026-05-01","year":2026,"impressions":611450,"clicks":8753,"ctr":0.014315,"cost":114784.57,"cpc":13.11,"conversions":34,"cpa":3376.02}],"campaignsWeekly":[{"campaign":"ТОКОС Поиск NEW","date":"2025-03-24","year":2025,"impressions":121,"clicks":24,"ctr":0.198347,"cost":6286.49,"cpc":261.94,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-03-24","year":2025,"impressions":32861,"clicks":1002,"ctr":0.030492,"cost":5910.6,"cpc":5.9,"conversions":3,"cpa":1970.2},{"campaign":"Токос_Пластиковые_погреба_МСК_ПОИСК","date":"2025-03-24","year":2025,"impressions":237,"clicks":37,"ctr":0.156118,"cost":7951.14,"cpc":214.9,"conversions":3,"cpa":2650.38},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-03-24","year":2025,"impressions":5814,"clicks":81,"ctr":0.013932,"cost":3110.35,"cpc":38.4,"conversions":2,"cpa":1555.18},{"campaign":"ТОКОС Поиск NEW","date":"2025-03-31","year":2025,"impressions":254,"clicks":36,"ctr":0.141732,"cost":12654.58,"cpc":351.52,"conversions":1,"cpa":12654.58},{"campaign":"ТОКОС Товарная кампания","date":"2025-03-31","year":2025,"impressions":81947,"clicks":1137,"ctr":0.013875,"cost":12846.7,"cpc":11.3,"conversions":10,"cpa":1284.67},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-03-31","year":2025,"impressions":5254,"clicks":80,"ctr":0.015226,"cost":2497.68,"cpc":31.22,"conversions":1,"cpa":2497.68},{"campaign":"ТОКОС Поиск NEW","date":"2025-04-07","year":2025,"impressions":311,"clicks":48,"ctr":0.154341,"cost":11446.51,"cpc":238.47,"conversions":2,"cpa":5723.26},{"campaign":"ТОКОС Товарная кампания","date":"2025-04-07","year":2025,"impressions":16381,"clicks":392,"ctr":0.02393,"cost":13630.58,"cpc":34.77,"conversions":4,"cpa":3407.64},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-04-07","year":2025,"impressions":5569,"clicks":71,"ctr":0.012749,"cost":2916.13,"cpc":41.07,"conversions":0,"cpa":0},{"campaign":"ТОКОС Поиск NEW","date":"2025-04-14","year":2025,"impressions":500,"clicks":78,"ctr":0.156,"cost":16071.32,"cpc":206.04,"conversions":2,"cpa":8035.66},{"campaign":"ТОКОС Товарная кампания","date":"2025-04-14","year":2025,"impressions":9586,"clicks":291,"ctr":0.030357,"cost":13013.65,"cpc":44.72,"conversions":11,"cpa":1183.06},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-04-14","year":2025,"impressions":4474,"clicks":62,"ctr":0.013858,"cost":2754.92,"cpc":44.43,"conversions":3,"cpa":918.31},{"campaign":"ЕПК Товарная кампания","date":"2025-04-21","year":2025,"impressions":1089,"clicks":94,"ctr":0.086318,"cost":7223.18,"cpc":76.84,"conversions":1,"cpa":7223.18},{"campaign":"ТОКОС Поиск NEW","date":"2025-04-21","year":2025,"impressions":279,"clicks":41,"ctr":0.146953,"cost":13637.32,"cpc":332.62,"conversions":3,"cpa":4545.77},{"campaign":"ТОКОС Товарная кампания","date":"2025-04-21","year":2025,"impressions":11540,"clicks":293,"ctr":0.02539,"cost":14184.75,"cpc":48.41,"conversions":12,"cpa":1182.06},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-04-21","year":2025,"impressions":4286,"clicks":55,"ctr":0.012832,"cost":2743.63,"cpc":49.88,"conversions":2,"cpa":1371.82},{"campaign":"ЕПК Товарная кампания","date":"2025-04-28","year":2025,"impressions":933,"clicks":103,"ctr":0.110397,"cost":10692.07,"cpc":103.81,"conversions":1,"cpa":10692.07},{"campaign":"ТОКОС Поиск NEW","date":"2025-04-28","year":2025,"impressions":185,"clicks":27,"ctr":0.145946,"cost":10411.95,"cpc":385.63,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-04-28","year":2025,"impressions":10047,"clicks":231,"ctr":0.022992,"cost":14229.42,"cpc":61.6,"conversions":14,"cpa":1016.39},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-04-28","year":2025,"impressions":3695,"clicks":51,"ctr":0.013802,"cost":2466.55,"cpc":48.36,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-05-05","year":2025,"impressions":960,"clicks":114,"ctr":0.11875,"cost":14077.24,"cpc":123.48,"conversions":4,"cpa":3519.31},{"campaign":"ТОКОС Поиск NEW","date":"2025-05-05","year":2025,"impressions":162,"clicks":24,"ctr":0.148148,"cost":7707.24,"cpc":321.14,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-05-05","year":2025,"impressions":9268,"clicks":259,"ctr":0.027946,"cost":13554.38,"cpc":52.33,"conversions":5,"cpa":2710.88},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-05-05","year":2025,"impressions":3160,"clicks":36,"ctr":0.011392,"cost":2453.4,"cpc":68.15,"conversions":1,"cpa":2453.4},{"campaign":"ЕПК Товарная кампания","date":"2025-05-12","year":2025,"impressions":1272,"clicks":172,"ctr":0.13522,"cost":11372.9,"cpc":66.12,"conversions":5,"cpa":2274.58},{"campaign":"ТОКОС Поиск NEW","date":"2025-05-12","year":2025,"impressions":248,"clicks":45,"ctr":0.181452,"cost":10181.22,"cpc":226.25,"conversions":1,"cpa":10181.22},{"campaign":"ТОКОС Товарная кампания","date":"2025-05-12","year":2025,"impressions":22171,"clicks":845,"ctr":0.038113,"cost":14065.8,"cpc":16.65,"conversions":4,"cpa":3516.45},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-05-12","year":2025,"impressions":5159,"clicks":43,"ctr":0.008335,"cost":2178.6,"cpc":50.67,"conversions":2,"cpa":1089.3},{"campaign":"ЕПК Товарная кампания","date":"2025-05-19","year":2025,"impressions":1352,"clicks":127,"ctr":0.093935,"cost":11443.43,"cpc":90.11,"conversions":2,"cpa":5721.72},{"campaign":"ТОКОС Поиск NEW","date":"2025-05-19","year":2025,"impressions":178,"clicks":27,"ctr":0.151685,"cost":8096.59,"cpc":299.87,"conversions":3,"cpa":2698.86},{"campaign":"ТОКОС Товарная кампания","date":"2025-05-19","year":2025,"impressions":109190,"clicks":3761,"ctr":0.034445,"cost":15354.18,"cpc":4.08,"conversions":7,"cpa":2193.45},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-05-19","year":2025,"impressions":7633,"clicks":60,"ctr":0.007861,"cost":2905.8,"cpc":48.43,"conversions":1,"cpa":2905.8},{"campaign":"ЕПК Товарная кампания","date":"2025-05-26","year":2025,"impressions":1167,"clicks":126,"ctr":0.107969,"cost":12508.77,"cpc":99.28,"conversions":0,"cpa":0},{"campaign":"ТОКОС Поиск NEW","date":"2025-05-26","year":2025,"impressions":184,"clicks":23,"ctr":0.125,"cost":7455.41,"cpc":324.15,"conversions":2,"cpa":3727.7},{"campaign":"ТОКОС Товарная кампания","date":"2025-05-26","year":2025,"impressions":134319,"clicks":3234,"ctr":0.024077,"cost":14210.56,"cpc":4.39,"conversions":8,"cpa":1776.32},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-05-26","year":2025,"impressions":6910,"clicks":74,"ctr":0.010709,"cost":3624.72,"cpc":48.98,"conversions":1,"cpa":3624.72},{"campaign":"ЕПК Товарная кампания","date":"2025-06-02","year":2025,"impressions":1076,"clicks":129,"ctr":0.119888,"cost":13269.95,"cpc":102.87,"conversions":5,"cpa":2653.99},{"campaign":"ТОКОС Поиск NEW","date":"2025-06-02","year":2025,"impressions":224,"clicks":30,"ctr":0.133929,"cost":7723.35,"cpc":257.44,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-06-02","year":2025,"impressions":122096,"clicks":2798,"ctr":0.022916,"cost":14532.05,"cpc":5.19,"conversions":4,"cpa":3633.01},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-06-02","year":2025,"impressions":5915,"clicks":52,"ctr":0.008791,"cost":2274.65,"cpc":43.74,"conversions":1,"cpa":2274.65},{"campaign":"ЕПК Товарная кампания","date":"2025-06-09","year":2025,"impressions":1075,"clicks":124,"ctr":0.115349,"cost":13842.92,"cpc":111.64,"conversions":0,"cpa":0},{"campaign":"ТОКОС Поиск NEW","date":"2025-06-09","year":2025,"impressions":108,"clicks":18,"ctr":0.166667,"cost":6811.36,"cpc":378.41,"conversions":2,"cpa":3405.68},{"campaign":"ТОКОС Товарная кампания","date":"2025-06-09","year":2025,"impressions":83448,"clicks":2047,"ctr":0.02453,"cost":13553.3,"cpc":6.62,"conversions":1,"cpa":13553.3},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-06-09","year":2025,"impressions":6561,"clicks":78,"ctr":0.011888,"cost":3591.28,"cpc":46.04,"conversions":1,"cpa":3591.28},{"campaign":"ЕПК Товарная кампания","date":"2025-06-16","year":2025,"impressions":1540,"clicks":186,"ctr":0.120779,"cost":18341.73,"cpc":98.61,"conversions":1,"cpa":18341.73},{"campaign":"ТОКОС Поиск NEW","date":"2025-06-16","year":2025,"impressions":356,"clicks":43,"ctr":0.120787,"cost":15409.91,"cpc":358.37,"conversions":3,"cpa":5136.64},{"campaign":"ТОКОС Товарная кампания","date":"2025-06-16","year":2025,"impressions":56006,"clicks":1440,"ctr":0.025712,"cost":15370.37,"cpc":10.67,"conversions":6,"cpa":2561.73},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-06-16","year":2025,"impressions":9341,"clicks":98,"ctr":0.010491,"cost":5477.53,"cpc":55.89,"conversions":2,"cpa":2738.76},{"campaign":"ЕПК Товарная кампания","date":"2025-06-23","year":2025,"impressions":1784,"clicks":174,"ctr":0.097534,"cost":16946.69,"cpc":97.39,"conversions":6,"cpa":2824.45},{"campaign":"ТОКОС Поиск NEW","date":"2025-06-23","year":2025,"impressions":355,"clicks":39,"ctr":0.109859,"cost":16395.98,"cpc":420.41,"conversions":1,"cpa":16395.98},{"campaign":"ТОКОС Товарная кампания","date":"2025-06-23","year":2025,"impressions":110560,"clicks":2336,"ctr":0.021129,"cost":15966.69,"cpc":6.84,"conversions":6,"cpa":2661.12},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-06-23","year":2025,"impressions":10638,"clicks":104,"ctr":0.009776,"cost":5290.64,"cpc":50.87,"conversions":3,"cpa":1763.55},{"campaign":"ЕПК Товарная кампания","date":"2025-06-30","year":2025,"impressions":1961,"clicks":177,"ctr":0.09026,"cost":16003.18,"cpc":90.41,"conversions":3,"cpa":5334.39},{"campaign":"ТОКОС Поиск NEW","date":"2025-06-30","year":2025,"impressions":320,"clicks":52,"ctr":0.1625,"cost":15962.29,"cpc":306.97,"conversions":2,"cpa":7981.14},{"campaign":"ТОКОС Товарная кампания","date":"2025-06-30","year":2025,"impressions":147072,"clicks":2867,"ctr":0.019494,"cost":18776.79,"cpc":6.55,"conversions":5,"cpa":3755.36},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-06-30","year":2025,"impressions":10673,"clicks":88,"ctr":0.008245,"cost":3857.74,"cpc":43.84,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-07-07","year":2025,"impressions":112555,"clicks":2205,"ctr":0.01959,"cost":18361.28,"cpc":8.33,"conversions":3,"cpa":6120.43},{"campaign":"ТОКОС Поиск NEW","date":"2025-07-07","year":2025,"impressions":1418,"clicks":165,"ctr":0.116361,"cost":18531.75,"cpc":112.31,"conversions":1,"cpa":18531.75},{"campaign":"ТОКОС Товарная кампания","date":"2025-07-07","year":2025,"impressions":12162,"clicks":102,"ctr":0.008387,"cost":4094.74,"cpc":40.14,"conversions":7,"cpa":584.96},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-07-07","year":2025,"impressions":177,"clicks":42,"ctr":0.237288,"cost":13612.23,"cpc":324.1,"conversions":2,"cpa":6806.12},{"campaign":"ЕПК Товарная кампания","date":"2025-07-14","year":2025,"impressions":1468,"clicks":196,"ctr":0.133515,"cost":19528.59,"cpc":99.64,"conversions":7,"cpa":2789.8},{"campaign":"ТОКОС Поиск NEW","date":"2025-07-14","year":2025,"impressions":201,"clicks":29,"ctr":0.144279,"cost":11109.33,"cpc":383.08,"conversions":1,"cpa":11109.33},{"campaign":"ТОКОС Товарная кампания","date":"2025-07-14","year":2025,"impressions":149864,"clicks":3475,"ctr":0.023188,"cost":19256.09,"cpc":5.54,"conversions":11,"cpa":1750.55},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-07-14","year":2025,"impressions":8321,"clicks":92,"ctr":0.011056,"cost":4705.98,"cpc":51.15,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-07-21","year":2025,"impressions":1532,"clicks":177,"ctr":0.115535,"cost":20766.11,"cpc":117.32,"conversions":3,"cpa":6922.04},{"campaign":"ТОКОС Поиск NEW","date":"2025-07-21","year":2025,"impressions":162,"clicks":31,"ctr":0.191358,"cost":12092.04,"cpc":390.07,"conversions":2,"cpa":6046.02},{"campaign":"ТОКОС Товарная кампания","date":"2025-07-21","year":2025,"impressions":100365,"clicks":2462,"ctr":0.02453,"cost":17816.33,"cpc":7.24,"conversions":8,"cpa":2227.04},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-07-21","year":2025,"impressions":5705,"clicks":74,"ctr":0.012971,"cost":3925.52,"cpc":53.05,"conversions":3,"cpa":1308.51},{"campaign":"ЕПК Товарная кампания","date":"2025-07-28","year":2025,"impressions":1519,"clicks":186,"ctr":0.122449,"cost":20380.12,"cpc":109.57,"conversions":4,"cpa":5095.03},{"campaign":"ТОКОС Поиск NEW","date":"2025-07-28","year":2025,"impressions":156,"clicks":39,"ctr":0.25,"cost":14337.28,"cpc":367.62,"conversions":4,"cpa":3584.32},{"campaign":"ТОКОС Товарная кампания","date":"2025-07-28","year":2025,"impressions":78460,"clicks":1945,"ctr":0.02479,"cost":16669.71,"cpc":8.57,"conversions":10,"cpa":1666.97},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-07-28","year":2025,"impressions":5222,"clicks":66,"ctr":0.012639,"cost":3212.89,"cpc":48.68,"conversions":1,"cpa":3212.89},{"campaign":"ЕПК Товарная кампания","date":"2025-08-04","year":2025,"impressions":1891,"clicks":228,"ctr":0.120571,"cost":20992.77,"cpc":92.07,"conversions":6,"cpa":3498.8},{"campaign":"ТОКОС Поиск NEW","date":"2025-08-04","year":2025,"impressions":250,"clicks":54,"ctr":0.216,"cost":15773.95,"cpc":292.11,"conversions":2,"cpa":7886.98},{"campaign":"ТОКОС Товарная кампания","date":"2025-08-04","year":2025,"impressions":74276,"clicks":1894,"ctr":0.025499,"cost":16357.14,"cpc":8.64,"conversions":14,"cpa":1168.37},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-08-04","year":2025,"impressions":1458,"clicks":30,"ctr":0.020576,"cost":1476.15,"cpc":49.21,"conversions":1,"cpa":1476.15},{"campaign":"ЕПК Товарная кампания","date":"2025-08-11","year":2025,"impressions":2188,"clicks":261,"ctr":0.119287,"cost":21983.69,"cpc":84.23,"conversions":7,"cpa":3140.53},{"campaign":"ТОКОС Поиск NEW","date":"2025-08-11","year":2025,"impressions":271,"clicks":51,"ctr":0.188192,"cost":14855.2,"cpc":291.28,"conversions":5,"cpa":2971.04},{"campaign":"ТОКОС Товарная кампания","date":"2025-08-11","year":2025,"impressions":61177,"clicks":1506,"ctr":0.024617,"cost":16787.51,"cpc":11.15,"conversions":10,"cpa":1678.75},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-08-11","year":2025,"impressions":1433,"clicks":32,"ctr":0.022331,"cost":973.6,"cpc":30.42,"conversions":3,"cpa":324.53},{"campaign":"ЕПК Товарная кампания","date":"2025-08-18","year":2025,"impressions":2141,"clicks":216,"ctr":0.100887,"cost":21526.89,"cpc":99.66,"conversions":3,"cpa":7175.63},{"campaign":"ТОКОС Поиск NEW","date":"2025-08-18","year":2025,"impressions":264,"clicks":56,"ctr":0.212121,"cost":13551.14,"cpc":241.98,"conversions":2,"cpa":6775.57},{"campaign":"ТОКОС Товарная кампания","date":"2025-08-18","year":2025,"impressions":62897,"clicks":1831,"ctr":0.029111,"cost":17339.91,"cpc":9.47,"conversions":12,"cpa":1444.99},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-08-18","year":2025,"impressions":3565,"clicks":62,"ctr":0.017391,"cost":2182.06,"cpc":35.19,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-08-25","year":2025,"impressions":2183,"clicks":242,"ctr":0.110857,"cost":21317.66,"cpc":88.09,"conversions":3,"cpa":7105.89},{"campaign":"ТОКОС Поиск NEW","date":"2025-08-25","year":2025,"impressions":400,"clicks":57,"ctr":0.1425,"cost":13398.47,"cpc":235.06,"conversions":5,"cpa":2679.69},{"campaign":"ТОКОС Товарная кампания","date":"2025-08-25","year":2025,"impressions":52450,"clicks":1333,"ctr":0.025415,"cost":17083.95,"cpc":12.82,"conversions":8,"cpa":2135.49},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-08-25","year":2025,"impressions":5857,"clicks":111,"ctr":0.018952,"cost":2799.92,"cpc":25.22,"conversions":3,"cpa":933.31},{"campaign":"ЕПК Товарная кампания","date":"2025-09-01","year":2025,"impressions":1816,"clicks":223,"ctr":0.122797,"cost":20300.12,"cpc":91.03,"conversions":3,"cpa":6766.71},{"campaign":"ТОКОС Поиск NEW","date":"2025-09-01","year":2025,"impressions":326,"clicks":60,"ctr":0.184049,"cost":15401.15,"cpc":256.69,"conversions":3,"cpa":5133.72},{"campaign":"ТОКОС Товарная кампания","date":"2025-09-01","year":2025,"impressions":57105,"clicks":1429,"ctr":0.025024,"cost":16183.18,"cpc":11.32,"conversions":13,"cpa":1244.86},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-09-01","year":2025,"impressions":6736,"clicks":120,"ctr":0.017815,"cost":2715.55,"cpc":22.63,"conversions":5,"cpa":543.11},{"campaign":"ЕПК Товарная кампания","date":"2025-09-08","year":2025,"impressions":2092,"clicks":225,"ctr":0.107553,"cost":18542.53,"cpc":82.41,"conversions":6,"cpa":3090.42},{"campaign":"ТОКОС Поиск NEW","date":"2025-09-08","year":2025,"impressions":371,"clicks":63,"ctr":0.169811,"cost":16420.78,"cpc":260.65,"conversions":1,"cpa":16420.78},{"campaign":"ТОКОС Товарная кампания","date":"2025-09-08","year":2025,"impressions":90990,"clicks":2815,"ctr":0.030937,"cost":17281.32,"cpc":6.14,"conversions":17,"cpa":1016.55},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-09-08","year":2025,"impressions":5510,"clicks":98,"ctr":0.017786,"cost":2345.31,"cpc":23.93,"conversions":5,"cpa":469.06},{"campaign":"ЕПК Товарная кампания","date":"2025-09-15","year":2025,"impressions":2021,"clicks":267,"ctr":0.132113,"cost":19271.74,"cpc":72.18,"conversions":8,"cpa":2408.97},{"campaign":"ТОКОС Поиск NEW","date":"2025-09-15","year":2025,"impressions":350,"clicks":61,"ctr":0.174286,"cost":17496.65,"cpc":286.83,"conversions":7,"cpa":2499.52},{"campaign":"ТОКОС Товарная кампания","date":"2025-09-15","year":2025,"impressions":76800,"clicks":2720,"ctr":0.035417,"cost":15475.49,"cpc":5.69,"conversions":18,"cpa":859.75},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-09-15","year":2025,"impressions":5411,"clicks":101,"ctr":0.018666,"cost":2356.12,"cpc":23.33,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-09-22","year":2025,"impressions":2267,"clicks":252,"ctr":0.11116,"cost":17221,"cpc":68.34,"conversions":2,"cpa":8610.5},{"campaign":"ТОКОС Поиск NEW","date":"2025-09-22","year":2025,"impressions":326,"clicks":64,"ctr":0.196319,"cost":17176.31,"cpc":268.38,"conversions":2,"cpa":8588.16},{"campaign":"ТОКОС Товарная кампания","date":"2025-09-22","year":2025,"impressions":121125,"clicks":3799,"ctr":0.031364,"cost":17823.84,"cpc":4.69,"conversions":9,"cpa":1980.43},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-09-22","year":2025,"impressions":3752,"clicks":91,"ctr":0.024254,"cost":2378.85,"cpc":26.14,"conversions":2,"cpa":1189.42},{"campaign":"ЕПК Товарная кампания","date":"2025-09-29","year":2025,"impressions":2504,"clicks":270,"ctr":0.107827,"cost":19016.13,"cpc":70.43,"conversions":3,"cpa":6338.71},{"campaign":"ТОКОС Поиск NEW","date":"2025-09-29","year":2025,"impressions":505,"clicks":71,"ctr":0.140594,"cost":16342.72,"cpc":230.18,"conversions":4,"cpa":4085.68},{"campaign":"ТОКОС Товарная кампания","date":"2025-09-29","year":2025,"impressions":105187,"clicks":3174,"ctr":0.030175,"cost":17078.53,"cpc":5.38,"conversions":11,"cpa":1552.59},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-09-29","year":2025,"impressions":5429,"clicks":110,"ctr":0.020262,"cost":2162.61,"cpc":19.66,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-10-06","year":2025,"impressions":11634,"clicks":261,"ctr":0.022434,"cost":5277.76,"cpc":20.22,"conversions":0,"cpa":0},{"campaign":"ТОКОС Поиск NEW","date":"2025-10-06","year":2025,"impressions":212,"clicks":44,"ctr":0.207547,"cost":14933.65,"cpc":339.4,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-10-06","year":2025,"impressions":87864,"clicks":4544,"ctr":0.051716,"cost":15438.34,"cpc":3.4,"conversions":4,"cpa":3859.58},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-10-06","year":2025,"impressions":135548,"clicks":5871,"ctr":0.043313,"cost":14046.56,"cpc":2.39,"conversions":1,"cpa":14046.56},{"campaign":"ЕПК Товарная кампания","date":"2025-10-13","year":2025,"impressions":12755,"clicks":398,"ctr":0.031203,"cost":5872.84,"cpc":14.76,"conversions":3,"cpa":1957.61},{"campaign":"ТОКОС Поиск NEW","date":"2025-10-13","year":2025,"impressions":303,"clicks":35,"ctr":0.115512,"cost":2915.43,"cpc":83.3,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-10-13","year":2025,"impressions":24181,"clicks":2092,"ctr":0.086514,"cost":22800,"cpc":10.9,"conversions":9,"cpa":2533.33},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-10-13","year":2025,"impressions":24277,"clicks":1891,"ctr":0.077893,"cost":15258.02,"cpc":8.07,"conversions":0,"cpa":0},{"campaign":"ЕПК Товарная кампания","date":"2025-10-20","year":2025,"impressions":11978,"clicks":304,"ctr":0.02538,"cost":5865.61,"cpc":19.29,"conversions":1,"cpa":5865.61},{"campaign":"ТОКОС Поиск NEW","date":"2025-10-20","year":2025,"impressions":189,"clicks":25,"ctr":0.132275,"cost":1930.26,"cpc":77.21,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-10-20","year":2025,"impressions":69745,"clicks":4726,"ctr":0.067761,"cost":22134.88,"cpc":4.68,"conversions":10,"cpa":2213.49},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-10-20","year":2025,"impressions":15225,"clicks":678,"ctr":0.044532,"cost":19734.47,"cpc":29.11,"conversions":1,"cpa":19734.47},{"campaign":"ЕПК Товарная кампания","date":"2025-10-27","year":2025,"impressions":7504,"clicks":299,"ctr":0.039845,"cost":3873.28,"cpc":12.95,"conversions":0,"cpa":0},{"campaign":"ТОКОС Поиск NEW","date":"2025-10-27","year":2025,"impressions":540,"clicks":74,"ctr":0.137037,"cost":7798.88,"cpc":105.39,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-10-27","year":2025,"impressions":140156,"clicks":8964,"ctr":0.063957,"cost":22385.34,"cpc":2.5,"conversions":6,"cpa":3730.89},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-10-27","year":2025,"impressions":14043,"clicks":291,"ctr":0.020722,"cost":6000,"cpc":20.62,"conversions":3,"cpa":2000},{"campaign":"ТОКОС Поиск NEW","date":"2025-11-03","year":2025,"impressions":540,"clicks":64,"ctr":0.118519,"cost":10375.45,"cpc":162.12,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-11-03","year":2025,"impressions":22126,"clicks":9101,"ctr":0.411326,"cost":36159.59,"cpc":3.97,"conversions":6,"cpa":6026.6},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-11-03","year":2025,"impressions":420,"clicks":504,"ctr":1.2,"cost":7727.73,"cpc":15.33,"conversions":2,"cpa":3863.86},{"campaign":"ТОКОС Товарная кампания","date":"2025-11-10","year":2025,"impressions":142211,"clicks":7317,"ctr":0.051452,"cost":34800,"cpc":4.76,"conversions":11,"cpa":3163.64},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-11-10","year":2025,"impressions":13049,"clicks":312,"ctr":0.02391,"cost":6000,"cpc":19.23,"conversions":3,"cpa":2000},{"campaign":"ТОКОС Товарная кампания","date":"2025-11-17","year":2025,"impressions":169848,"clicks":9029,"ctr":0.053159,"cost":34704.51,"cpc":3.84,"conversions":5,"cpa":6940.9},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-11-17","year":2025,"impressions":14458,"clicks":382,"ctr":0.026421,"cost":5900.82,"cpc":15.45,"conversions":1,"cpa":5900.82},{"campaign":"ТОКОС Товарная кампания","date":"2025-11-24","year":2025,"impressions":205664,"clicks":6356,"ctr":0.030905,"cost":34800,"cpc":5.48,"conversions":7,"cpa":4971.43},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-11-24","year":2025,"impressions":13683,"clicks":619,"ctr":0.045239,"cost":6000,"cpc":9.69,"conversions":2,"cpa":3000},{"campaign":"ТОКОС Товарная кампания","date":"2025-12-01","year":2025,"impressions":300990,"clicks":7669,"ctr":0.025479,"cost":34800,"cpc":4.54,"conversions":9,"cpa":3866.67},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-12-01","year":2025,"impressions":17486,"clicks":786,"ctr":0.04495,"cost":6000,"cpc":7.63,"conversions":1,"cpa":6000},{"campaign":"ТОКОС Товарная кампания","date":"2025-12-08","year":2025,"impressions":144584,"clicks":2138,"ctr":0.014787,"cost":24387.05,"cpc":11.41,"conversions":4,"cpa":6096.76},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-12-08","year":2025,"impressions":1,"clicks":1,"ctr":1,"cost":5.19,"cpc":5.19,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-12-15","year":2025,"impressions":133429,"clicks":4343,"ctr":0.032549,"cost":22355.99,"cpc":5.15,"conversions":2,"cpa":11178},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-12-15","year":2025,"impressions":1,"clicks":1,"ctr":1,"cost":5.19,"cpc":5.19,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-12-22","year":2025,"impressions":166616,"clicks":2794,"ctr":0.016769,"cost":21837.64,"cpc":7.82,"conversions":6,"cpa":3639.61},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-12-22","year":2025,"impressions":1,"clicks":1,"ctr":1,"cost":5.19,"cpc":5.19,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2026-01-12","year":2026,"impressions":85157,"clicks":1525,"ctr":0.017908,"cost":18226.63,"cpc":11.95,"conversions":8,"cpa":2278.33},{"campaign":"ТОКОС Товарная кампания","date":"2026-01-19","year":2026,"impressions":18994,"clicks":714,"ctr":0.037591,"cost":18046.15,"cpc":25.27,"conversions":7,"cpa":2578.02},{"campaign":"ТОКОС Товарная кампания","date":"2026-01-26","year":2026,"impressions":66850,"clicks":1094,"ctr":0.016365,"cost":18277.19,"cpc":16.71,"conversions":8,"cpa":2284.65},{"campaign":"ТОКОС Товарная кампания","date":"2026-02-02","year":2026,"impressions":24511,"clicks":787,"ctr":0.032108,"cost":17971.2,"cpc":22.84,"conversions":6,"cpa":2995.2},{"campaign":"ТОКОС Товарная кампания","date":"2026-02-09","year":2026,"impressions":15696,"clicks":561,"ctr":0.035742,"cost":18036.64,"cpc":32.15,"conversions":7,"cpa":2576.66},{"campaign":"ТОКОС Товарная кампания","date":"2026-02-16","year":2026,"impressions":15203,"clicks":979,"ctr":0.064395,"cost":24656.08,"cpc":25.18,"conversions":10,"cpa":2465.61},{"campaign":"ТОКОС Товарная кампания","date":"2026-02-23","year":2026,"impressions":14002,"clicks":679,"ctr":0.048493,"cost":19857.57,"cpc":29.25,"conversions":5,"cpa":3971.51},{"campaign":"ТОКОС Товарная кампания","date":"2026-03-02","year":2026,"impressions":31052,"clicks":692,"ctr":0.022285,"cost":24185.97,"cpc":34.95,"conversions":8,"cpa":3023.25},{"campaign":"ТОКОС Товарная кампания","date":"2026-03-09","year":2026,"impressions":35122,"clicks":890,"ctr":0.02534,"cost":24400,"cpc":27.42,"conversions":2,"cpa":12200},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-03-09","year":2026,"impressions":16988,"clicks":480,"ctr":0.028255,"cost":5216.84,"cpc":10.87,"conversions":0,"cpa":0},{"campaign":"Мастер кампаний","date":"2026-03-16","year":2026,"impressions":44880,"clicks":680,"ctr":0.015152,"cost":14375.14,"cpc":21.14,"conversions":9,"cpa":1597.24},{"campaign":"ТОКОС Товарная кампания","date":"2026-03-16","year":2026,"impressions":805,"clicks":19,"ctr":0.023602,"cost":578.37,"cpc":30.44,"conversions":1,"cpa":578.37},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-03-16","year":2026,"impressions":56202,"clicks":854,"ctr":0.015195,"cost":14387.06,"cpc":16.85,"conversions":12,"cpa":1198.92},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-03-16","year":2026,"impressions":16750,"clicks":268,"ctr":0.016,"cost":6100,"cpc":22.76,"conversions":0,"cpa":0},{"campaign":"Мастер кампаний","date":"2026-03-23","year":2026,"impressions":44544,"clicks":1313,"ctr":0.029476,"cost":12544.93,"cpc":9.55,"conversions":8,"cpa":1568.12},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-03-23","year":2026,"impressions":27448,"clicks":1012,"ctr":0.03687,"cost":19026.32,"cpc":18.8,"conversions":12,"cpa":1585.53},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-03-23","year":2026,"impressions":16136,"clicks":213,"ctr":0.0132,"cost":6080.78,"cpc":28.55,"conversions":4,"cpa":1520.2},{"campaign":"Мастер кампаний","date":"2026-03-30","year":2026,"impressions":230133,"clicks":3745,"ctr":0.016273,"cost":16352.24,"cpc":4.37,"conversions":9,"cpa":1816.92},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-03-30","year":2026,"impressions":29572,"clicks":673,"ctr":0.022758,"cost":10926.62,"cpc":16.24,"conversions":8,"cpa":1365.83},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-03-30","year":2026,"impressions":16609,"clicks":222,"ctr":0.013366,"cost":6050.05,"cpc":27.25,"conversions":5,"cpa":1210.01},{"campaign":"Мастер кампаний","date":"2026-04-06","year":2026,"impressions":172085,"clicks":2875,"ctr":0.016707,"cost":11843.69,"cpc":4.12,"conversions":6,"cpa":1973.95},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-04-06","year":2026,"impressions":26974,"clicks":504,"ctr":0.018685,"cost":7601.37,"cpc":15.08,"conversions":6,"cpa":1266.9},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-04-06","year":2026,"impressions":20683,"clicks":229,"ctr":0.011072,"cost":6100,"cpc":26.64,"conversions":1,"cpa":6100},{"campaign":"Мастер кампаний","date":"2026-04-13","year":2026,"impressions":195450,"clicks":3314,"ctr":0.016956,"cost":22649.36,"cpc":6.83,"conversions":12,"cpa":1887.45},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-04-13","year":2026,"impressions":47204,"clicks":734,"ctr":0.01555,"cost":15542.22,"cpc":21.17,"conversions":11,"cpa":1412.93},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-04-13","year":2026,"impressions":19192,"clicks":191,"ctr":0.009952,"cost":6089.53,"cpc":31.88,"conversions":2,"cpa":3044.76},{"campaign":"Мастер кампаний","date":"2026-04-20","year":2026,"impressions":270162,"clicks":4383,"ctr":0.016224,"cost":23295.3,"cpc":5.31,"conversions":11,"cpa":2117.75},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-04-20","year":2026,"impressions":30114,"clicks":730,"ctr":0.024241,"cost":17490.73,"cpc":23.96,"conversions":8,"cpa":2186.34},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-04-20","year":2026,"impressions":15398,"clicks":272,"ctr":0.017665,"cost":6100,"cpc":22.43,"conversions":3,"cpa":2033.33},{"campaign":"Мастер кампаний","date":"2026-04-27","year":2026,"impressions":273244,"clicks":7037,"ctr":0.025754,"cost":24377.81,"cpc":3.46,"conversions":4,"cpa":6094.45},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-04-27","year":2026,"impressions":55774,"clicks":593,"ctr":0.010632,"cost":17159.69,"cpc":28.94,"conversions":8,"cpa":2144.96},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-04-27","year":2026,"impressions":21045,"clicks":319,"ctr":0.015158,"cost":6100,"cpc":19.12,"conversions":2,"cpa":3050},{"campaign":"Мастер кампаний","date":"2026-05-04","year":2026,"impressions":27074,"clicks":429,"ctr":0.015845,"cost":17373.46,"cpc":40.5,"conversions":5,"cpa":3474.69},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-05-04","year":2026,"impressions":186884,"clicks":2661,"ctr":0.014239,"cost":20699.78,"cpc":7.78,"conversions":4,"cpa":5174.94},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-05-04","year":2026,"impressions":24248,"clicks":326,"ctr":0.013444,"cost":6100,"cpc":18.71,"conversions":2,"cpa":3050},{"campaign":"Мастер кампаний","date":"2026-05-11","year":2026,"impressions":30139,"clicks":490,"ctr":0.016258,"cost":21287.35,"cpc":43.44,"conversions":8,"cpa":2660.92},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-05-11","year":2026,"impressions":165102,"clicks":1050,"ctr":0.00636,"cost":22290.1,"cpc":21.23,"conversions":9,"cpa":2476.68},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-05-11","year":2026,"impressions":26989,"clicks":380,"ctr":0.01408,"cost":6100,"cpc":16.05,"conversions":0,"cpa":0}],"campaignsMonthly":[{"campaign":"ТОКОС Поиск NEW","date":"2025-03-01","year":2025,"impressions":157,"clicks":29,"ctr":0.184713,"cost":8094.29,"cpc":279.11,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-03-01","year":2025,"impressions":44568,"clicks":1164,"ctr":0.026117,"cost":7745.84,"cpc":6.65,"conversions":4,"cpa":1936.46},{"campaign":"Токос_Пластиковые_погреба_МСК_ПОИСК","date":"2025-03-01","year":2025,"impressions":237,"clicks":37,"ctr":0.156118,"cost":7951.14,"cpc":214.9,"conversions":3,"cpa":2650.38},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-03-01","year":2025,"impressions":6565,"clicks":92,"ctr":0.014014,"cost":3467.16,"cpc":37.69,"conversions":2,"cpa":1733.58},{"campaign":"ЕПК Товарная кампания","date":"2025-04-01","year":2025,"impressions":1489,"clicks":138,"ctr":0.09268,"cost":11805.5,"cpc":85.55,"conversions":1,"cpa":11805.5},{"campaign":"ТОКОС Поиск NEW","date":"2025-04-01","year":2025,"impressions":1387,"clicks":210,"ctr":0.151406,"cost":56464.19,"cpc":268.88,"conversions":8,"cpa":7058.02},{"campaign":"ТОКОС Товарная кампания","date":"2025-04-01","year":2025,"impressions":112053,"clicks":2050,"ctr":0.018295,"cost":57938.76,"cpc":28.26,"conversions":42,"cpa":1379.49},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-04-01","year":2025,"impressions":20416,"clicks":279,"ctr":0.013666,"cost":11612.64,"cpc":41.62,"conversions":6,"cpa":1935.44},{"campaign":"ЕПК Товарная кампания","date":"2025-05-01","year":2025,"impressions":5118,"clicks":581,"ctr":0.113521,"cost":53725.13,"cpc":92.47,"conversions":12,"cpa":4477.09},{"campaign":"ТОКОС Поиск NEW","date":"2025-05-01","year":2025,"impressions":852,"clicks":131,"ctr":0.153756,"cost":38325.1,"cpc":292.56,"conversions":6,"cpa":6387.52},{"campaign":"ТОКОС Товарная кампания","date":"2025-05-01","year":2025,"impressions":261501,"clicks":7770,"ctr":0.029713,"cost":63285.95,"cpc":8.14,"conversions":31,"cpa":2041.48},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-05-01","year":2025,"impressions":23986,"clicks":232,"ctr":0.009672,"cost":12054.17,"cpc":51.96,"conversions":5,"cpa":2410.83},{"campaign":"ЕПК Товарная кампания","date":"2025-06-01","year":2025,"impressions":5755,"clicks":638,"ctr":0.11086,"cost":64687.46,"cpc":101.39,"conversions":12,"cpa":5390.62},{"campaign":"ТОКОС Поиск NEW","date":"2025-06-01","year":2025,"impressions":1089,"clicks":137,"ctr":0.125803,"cost":48620.93,"cpc":354.90,"conversions":6,"cpa":8103.49},{"campaign":"ТОКОС Товарная кампания","date":"2025-06-01","year":2025,"impressions":393120,"clicks":9031,"ctr":0.022973,"cost":62104.81,"cpc":6.88,"conversions":18,"cpa":3450.27},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-06-01","year":2025,"impressions":33980,"clicks":345,"ctr":0.010153,"cost":17185.21,"cpc":49.81,"conversions":7,"cpa":2455.03},{"campaign":"ЕПК Товарная кампания","date":"2025-07-01","year":2025,"impressions":118104,"clicks":2836,"ctr":0.024013,"cost":84018.77,"cpc":29.63,"conversions":18,"cpa":4667.71},{"campaign":"ТОКОС Поиск NEW","date":"2025-07-01","year":2025,"impressions":2144,"clicks":292,"ctr":0.136194,"cost":63607.81,"cpc":217.83,"conversions":8,"cpa":7950.98},{"campaign":"ТОКОС Товарная кампания","date":"2025-07-01","year":2025,"impressions":433287,"clicks":9607,"ctr":0.022172,"cost":66787.1,"cpc":6.95,"conversions":36,"cpa":1855.20},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-07-01","year":2025,"impressions":26335,"clicks":321,"ctr":0.012189,"cost":27386.3,"cpc":85.32,"conversions":6,"cpa":4564.38},{"campaign":"ЕПК Товарная кампания","date":"2025-08-01","year":2025,"impressions":9054,"clicks":1027,"ctr":0.113431,"cost":94555.35,"cpc":92.07,"conversions":21,"cpa":4502.64},{"campaign":"ТОКОС Поиск NEW","date":"2025-08-01","year":2025,"impressions":1252,"clicks":235,"ctr":0.1877,"cost":63723.31,"cpc":271.16,"conversions":16,"cpa":3982.71},{"campaign":"ТОКОС Товарная кампания","date":"2025-08-01","year":2025,"impressions":284426,"clicks":7398,"ctr":0.02601,"cost":74712.67,"cpc":10.10,"conversions":48,"cpa":1556.51},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-08-01","year":2025,"impressions":14551,"clicks":263,"ctr":0.018074,"cost":8808.68,"cpc":33.49,"conversions":7,"cpa":1258.38},{"campaign":"ЕПК Товарная кампания","date":"2025-09-01","year":2025,"impressions":8911,"clicks":1044,"ctr":0.117159,"cost":80768.57,"cpc":77.36,"conversions":20,"cpa":4038.43},{"campaign":"ТОКОС Поиск NEW","date":"2025-09-01","year":2025,"impressions":1517,"clicks":268,"ctr":0.176664,"cost":71164.24,"cpc":265.54,"conversions":14,"cpa":5083.16},{"campaign":"ТОКОС Товарная кампания","date":"2025-09-01","year":2025,"impressions":376073,"clicks":11670,"ctr":0.031031,"cost":71643.41,"cpc":6.14,"conversions":60,"cpa":1194.06},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-09-01","year":2025,"impressions":22960,"clicks":441,"ctr":0.019207,"cost":10413.72,"cpc":23.61,"conversions":12,"cpa":867.81},{"campaign":"ЕПК Товарная кампания","date":"2025-10-01","year":2025,"impressions":43516,"clicks":1370,"ctr":0.031483,"cost":33365.79,"cpc":24.35,"conversions":6,"cpa":5560.96},{"campaign":"ТОКОС Поиск NEW","date":"2025-10-01","year":2025,"impressions":1451,"clicks":208,"ctr":0.143349,"cost":37023.34,"cpc":178.00,"conversions":3,"cpa":12341.11},{"campaign":"ТОКОС Товарная кампания","date":"2025-10-01","year":2025,"impressions":357035,"clicks":20032,"ctr":0.056107,"cost":88561.7,"cpc":4.42,"conversions":35,"cpa":2530.33},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-10-01","year":2025,"impressions":188959,"clicks":8727,"ctr":0.046185,"cost":54869.48,"cpc":6.29,"conversions":4,"cpa":13717.37},{"campaign":"ЕПК Товарная кампания","date":"2025-11-01","year":2025,"impressions":2310,"clicks":102,"ctr":0.044156,"cost":2893.61,"cpc":28.37,"conversions":0,"cpa":0},{"campaign":"ТОКОС Поиск NEW","date":"2025-11-01","year":2025,"impressions":720,"clicks":88,"ctr":0.122222,"cost":13668.75,"cpc":155.33,"conversions":0,"cpa":0},{"campaign":"ТОКОС Товарная кампания","date":"2025-11-01","year":2025,"impressions":579894,"clicks":34364,"ctr":0.059259,"cost":146859.91,"cpc":4.27,"conversions":31,"cpa":4737.42},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-11-01","year":2025,"impressions":45622,"clicks":1900,"ctr":0.041647,"cost":27342.84,"cpc":14.39,"conversions":9,"cpa":3038.09},{"campaign":"ТОКОС Товарная кампания","date":"2025-12-01","year":2025,"impressions":745619,"clicks":16944,"ctr":0.022725,"cost":103380.68,"cpc":6.10,"conversions":21,"cpa":4922.89},{"campaign":"Токос_Ретаргетинг_МСК","date":"2025-12-01","year":2025,"impressions":17489,"clicks":789,"ctr":0.045114,"cost":6015.57,"cpc":7.62,"conversions":1,"cpa":6015.57},{"campaign":"ТОКОС Товарная кампания","date":"2026-01-01","year":2026,"impressions":161452,"clicks":3177,"ctr":0.019678,"cost":51938.95,"cpc":16.35,"conversions":22,"cpa":2360.86},{"campaign":"ТОКОС Товарная кампания","date":"2026-02-01","year":2026,"impressions":67412,"clicks":2910,"ctr":0.043167,"cost":77684.7,"cpc":26.70,"conversions":28,"cpa":2774.45},{"campaign":"Мастер кампаний","date":"2026-03-01","year":2026,"impressions":155176,"clicks":3063,"ctr":0.019739,"cost":31592.14,"cpc":10.31,"conversions":20,"cpa":1579.61},{"campaign":"ТОКОС Товарная кампания","date":"2026-03-01","year":2026,"impressions":97716,"clicks":2314,"ctr":0.023681,"cost":56642.22,"cpc":24.48,"conversions":13,"cpa":4357.09},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-03-01","year":2026,"impressions":92099,"clicks":2058,"ctr":0.022346,"cost":36535.27,"cpc":17.75,"conversions":26,"cpa":1405.20},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-03-01","year":2026,"impressions":54619,"clicks":1024,"ctr":0.018748,"cost":19126.21,"cpc":18.68,"conversions":5,"cpa":3825.24},{"campaign":"Мастер кампаний","date":"2026-04-01","year":2026,"impressions":958217,"clicks":17268,"ctr":0.018021,"cost":83398.7,"cpc":4.83,"conversions":37,"cpa":2254.02},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-04-01","year":2026,"impressions":157286,"clicks":2788,"ctr":0.017726,"cost":58244.59,"cpc":20.89,"conversions":36,"cpa":1617.91},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-04-01","year":2026,"impressions":79163,"clicks":1033,"ctr":0.013049,"cost":26096.7,"cpc":25.26,"conversions":11,"cpa":2372.43},{"campaign":"Мастер кампаний","date":"2026-05-01","year":2026,"impressions":174318,"clicks":3935,"ctr":0.022574,"cost":49108.44,"cpc":12.48,"conversions":15,"cpa":3273.9},{"campaign":"ТОКОС Товарная кампания (перезапуск)","date":"2026-05-01","year":2026,"impressions":375889,"clicks":3965,"ctr":0.010548,"cost":50344.03,"cpc":12.7,"conversions":16,"cpa":3146.5},{"campaign":"Токос_Ретаргетинг_МСК","date":"2026-05-01","year":2026,"impressions":61243,"clicks":853,"ctr":0.013928,"cost":15332.1,"cpc":17.97,"conversions":3,"cpa":5110.7}]}}
+;
+    const clientLabels = { titan: "Титан", tokos: "Токос" };
+    const colors = { impressions: "#2364aa", clicks: "#008c8c", ctr: "#2e7d32", cost: "#d28b00", cpc: "#bc4b51", conversions: "#6654c8", cpa: "#bc4b51" };
+    const formatNumber = new Intl.NumberFormat("ru-RU");
+    const formatMoney = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 });
+    const formatMoneyPrecise = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatPct = new Intl.NumberFormat("ru-RU", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatDeltaPct = new Intl.NumberFormat("ru-RU", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const state = { client: "titan", mode: "weekly", range: "all", week: "all" };
+    let monthDetailsOpen = true;
+    const chartStates = new Map();
+
+    document.querySelectorAll("[data-client]").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll("[data-client]").forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+        state.client = button.dataset.client;
+        state.range = "all";
+        state.week = "all";
+        monthDetailsOpen = true;
+        renderYearButtons();
+        updateWeekFilter();
+        render();
+      });
+    });
+
+    document.querySelectorAll("[data-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll("[data-mode]").forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+        state.mode = button.dataset.mode;
+        state.range = "all";
+        state.week = "all";
+        monthDetailsOpen = true;
+        renderYearButtons();
+        updateWeekFilter();
+        render();
+      });
+    });
+
+    document.getElementById("weekFilter").addEventListener("change", (event) => {
+      state.week = event.target.value;
+      monthDetailsOpen = true;
+      render();
+    });
+
+    window.addEventListener("resize", debounce(() => {
+      render();
+      updateFloatingTableHeader();
+    }, 120));
+    window.addEventListener("scroll", updateFloatingTableHeader, { passive: true });
+
+    function currentData() { return clients[state.client][state.mode]; }
+    function currentCampaignData() {
+      return clients[state.client][state.mode === "monthly" ? "campaignsMonthly" : "campaignsWeekly"];
+    }
+
+    function renderYearButtons() {
+      const years = [...new Set(currentData().map((item) => item.year))].sort();
+      document.getElementById("yearButtons").innerHTML = ["all", ...years].map((year) => {
+        const active = String(state.range) === String(year) ? "active" : "";
+        const label = year === "all" ? "Все" : year;
+        return `<button class="${active}" type="button" data-range="${year}">${label}</button>`;
+      }).join("");
+      document.querySelectorAll("[data-range]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-range]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          state.range = button.dataset.range;
+          state.week = "all";
+          monthDetailsOpen = true;
+          updateWeekFilter();
+          render();
+        });
+      });
+    }
+
+    function updateWeekFilter() {
+      const periodName = state.mode === "monthly" ? "месяцы" : "недели";
+      const periods = currentData().filter((item) => state.range === "all" || String(item.year) === state.range);
+      document.getElementById("periodFilterLabel").textContent = state.mode === "monthly" ? "Месяц" : "Неделя";
+      document.getElementById("weekFilter").innerHTML = [
+        `<option value="all">Все ${periodName}</option>`,
+        ...periods.map((item) => `<option value="${item.date}">${item.period}</option>`)
+      ].join("");
+      document.getElementById("weekFilter").value = state.week;
+    }
+
+    function getFilteredData() {
+      return currentData().filter((item) => {
+        const yearMatches = state.range === "all" || String(item.year) === state.range;
+        const weekMatches = state.week === "all" || item.date === state.week;
+        return yearMatches && weekMatches;
+      });
+    }
+
+    function getChartData(rows) {
+      if (state.mode !== "monthly" || state.week === "all" || !rows.length) return rows;
+      const selectedMonth = rows[0].date.slice(0, 7);
+      return clients[state.client].weekly.filter((item) => weekOverlapsMonth(item.date, selectedMonth));
+    }
+
+    function getMonthDetailRows(rows) {
+      if (state.mode !== "monthly" || state.week === "all" || !rows.length) return [];
+      const selectedMonth = rows[0].date.slice(0, 7);
+      return clients[state.client].weekly.filter((item) => weekOverlapsMonth(item.date, selectedMonth));
+    }
+
+    function weekOverlapsMonth(weekDate, monthKey) {
+      const [year, month] = monthKey.split("-").map(Number);
+      const weekStart = new Date(`${weekDate}T00:00:00`);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = new Date(year, month, 0);
+      return weekStart <= monthEnd && weekEnd >= monthStart;
+    }
+
+    function render() {
+      const rows = getFilteredData();
+      const chartRows = getChartData(rows);
+      document.getElementById("clientTitle").textContent = clientLabels[state.client];
+      renderKpis(rows);
+      renderLeaders(rows);
+      renderMonthlyInsights(rows);
+      renderTable(rows);
+      renderNote(rows);
+      renderChart("trafficChart", chartRows, [
+        { key: "impressions", label: "Показы", color: colors.impressions, formatter: compactNumber },
+        { key: "clicks", label: "Клики", color: colors.clicks, formatter: compactNumber }
+      ], { type: "line" });
+      renderChart("costChart", chartRows, [
+        { key: "cost", label: "Расход", color: colors.cost, formatter: compactMoney }
+      ], { type: "bar" });
+      renderChart("conversionsChart", chartRows, [
+        { key: "conversions", label: "Конверсии", color: colors.conversions, formatter: formatNumber.format }
+      ], { type: "line" });
+      renderChart("efficiencyChart", chartRows, [
+        { key: "ctr", label: "CTR", color: colors.ctr, axis: "left", formatter: (v) => `${(v * 100).toFixed(1)}%` },
+        { key: "cpc", label: "CPC", color: colors.cpc, axis: "right", formatter: (v) => Math.round(v).toString() }
+      ], { type: "dual" });
+      renderChart("cpaChart", chartRows, [
+        { key: "cpa", label: "CPA", color: colors.cpa, formatter: compactMoney }
+      ], { type: "bar" });
+      updateFloatingTableHeader();
+    }
+
+    function summarizeRows(rows) {
+      const totals = rows.reduce((acc, item) => {
+        acc.impressions += item.impressions || 0;
+        acc.clicks += item.clicks || 0;
+        acc.cost += item.cost || 0;
+        acc.conversions += item.conversions || 0;
+        return acc;
+      }, { impressions: 0, clicks: 0, cost: 0, conversions: 0 });
+      return {
+        impressions: totals.impressions,
+        clicks: totals.clicks,
+        cost: totals.cost,
+        conversions: totals.conversions,
+        ctr: totals.impressions ? totals.clicks / totals.impressions : 0,
+        cpc: totals.clicks ? totals.cost / totals.clicks : 0,
+        cpa: totals.conversions ? totals.cost / totals.conversions : 0
+      };
+    }
+
+    function renderKpis(rows) {
+      const current = summarizeRows(rows);
+      const previousRows = getPreviousRows(rows);
+      const previous = summarizeRows(previousRows);
+      const period = getPeriodLabel(rows);
+      const canCompare = previousRows.length === rows.length && previousRows.length > 0;
+      const metrics = [
+        { key: "impressions", label: "Показы", formatter: formatNumber.format },
+        { key: "clicks", label: "Клики", formatter: formatNumber.format },
+        { key: "ctr", label: "CTR", formatter: formatPct.format },
+        { key: "cost", label: "Расход", formatter: formatMoney.format },
+        { key: "cpc", label: "CPC", formatter: formatMoneyPrecise.format, inverse: true },
+        { key: "conversions", label: "Конверсии", formatter: formatNumber.format },
+        { key: "cpa", label: "CPA", formatter: formatMoneyPrecise.format, inverse: true }
+      ];
+      document.getElementById("kpiGrid").innerHTML = metrics.map((metric) => {
+        const value = current[metric.key] || 0;
+        const prev = previous[metric.key] || 0;
+        const delta = value - prev;
+        const pct = prev ? delta / prev : 0;
+        const good = metric.inverse ? delta <= 0 : delta >= 0;
+        const deltaText = canCompare ? `${delta >= 0 ? "+" : ""}${metric.formatter(delta)} / ${formatDeltaPct.format(pct)}` : `за ${rows.length} ${periodUnitShort()}`;
+        return `<article class="kpi"><div class="label">${metric.label}, ${period}</div><div class="value">${metric.formatter(value)}</div><div class="delta ${canCompare ? (good ? "good" : "bad") : ""}">${deltaText}</div></article>`;
+      }).join("");
+    }
+
+    function renderLeaders(rows) {
+      const campaignRows = getFilteredCampaignData();
+      const aggregated = summarizeCampaigns(campaignRows);
+      const byConversions = aggregated
+        .filter((item) => item.conversions > 0)
+        .sort((a, b) => b.conversions - a.conversions || a.cpa - b.cpa)
+        .slice(0, 5);
+      const byCpa = aggregated
+        .filter((item) => item.conversions > 0 && item.cpa > 0)
+        .sort((a, b) => a.cpa - b.cpa || b.conversions - a.conversions)
+        .slice(0, 5);
+      document.getElementById("leadersHint").textContent = `${getPeriodLabel(rows)}, ${campaignRows.length} строк кампаний`;
+      document.getElementById("topConversions").innerHTML = renderLeaderItems(byConversions, "conversions");
+      document.getElementById("topCpa").innerHTML = renderLeaderItems(byCpa, "cpa");
+    }
+
+    function renderLeaderItems(items, metric) {
+      if (!items.length) return '<div class="leader-meta">Нет кампаний с конверсиями в выбранном периоде.</div>';
+      return items.map((item) => {
+        const value = metric === "conversions" ? `${formatNumber.format(item.conversions)} конв.` : formatMoneyPrecise.format(item.cpa);
+        return `
+          <div class="leader-item">
+            <div>
+              <div class="leader-name" title="${escapeHtml(item.campaign)}">${escapeHtml(item.campaign)}</div>
+              <div class="leader-meta">${formatMoneyPrecise.format(item.cost)} · ${formatNumber.format(item.clicks)} кликов · CPA ${item.cpa ? formatMoneyPrecise.format(item.cpa) : "—"}</div>
+            </div>
+            <div class="leader-value">${value}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function getFilteredCampaignData() {
+      const selectedDates = new Set(getFilteredData().map((item) => item.date));
+      return currentCampaignData().filter((item) => {
+        const yearMatches = state.range === "all" || String(item.year) === state.range;
+        const periodMatches = state.week === "all" || selectedDates.has(item.date);
+        return yearMatches && periodMatches;
+      });
+    }
+
+    function summarizeCampaigns(rows) {
+      const map = new Map();
+      rows.forEach((item) => {
+        const entry = map.get(item.campaign) || { campaign: item.campaign, impressions: 0, clicks: 0, cost: 0, conversions: 0 };
+        entry.impressions += item.impressions || 0;
+        entry.clicks += item.clicks || 0;
+        entry.cost += item.cost || 0;
+        entry.conversions += item.conversions || 0;
+        map.set(item.campaign, entry);
+      });
+      return [...map.values()].map((item) => ({
+        ...item,
+        ctr: item.impressions ? item.clicks / item.impressions : 0,
+        cpc: item.clicks ? item.cost / item.clicks : 0,
+        cpa: item.conversions ? item.cost / item.conversions : 0
+      }));
+    }
+
+    function renderMonthlyInsights(rows) {
+      const container = document.getElementById("monthlyInsights");
+      if (state.mode !== "monthly") {
+        document.getElementById("insightsHint").textContent = "доступно в режиме месяцев";
+        container.innerHTML = '<div class="insight-card"><h3>Месячные выводы</h3><p>Переключите отчет на <strong>Месяцы</strong>, чтобы увидеть краткие выводы и рекомендации по каждому месяцу.</p></div>';
+        return;
+      }
+
+      document.getElementById("insightsHint").textContent = `${rows.length} ${periodUnitShort()}`;
+      container.innerHTML = rows.map((row) => renderInsightCard(row)).join("");
+    }
+
+    function renderInsightCard(row) {
+      const allMonths = currentData();
+      const previous = allMonths[allMonths.findIndex((item) => item.date === row.date) - 1];
+      const campaigns = currentCampaignData().filter((item) => item.date === row.date);
+      const topConversion = [...campaigns].filter((item) => item.conversions > 0).sort((a, b) => b.conversions - a.conversions || a.cpa - b.cpa)[0];
+      const topCpa = [...campaigns].filter((item) => item.conversions > 0 && item.cpa > 0).sort((a, b) => a.cpa - b.cpa || b.conversions - a.conversions)[0];
+      const spendWithoutConversions = campaigns.filter((item) => item.conversions === 0 && item.cost > 0).sort((a, b) => b.cost - a.cost)[0];
+      const conclusion = buildConclusion(row, previous);
+      const recommendation = buildRecommendation(row, previous, topConversion, topCpa, spendWithoutConversions);
+
+      return `
+        <article class="insight-card">
+          <h3>${row.period}</h3>
+          <p><strong>Вывод:</strong> ${conclusion}</p>
+          <p><strong>Рекомендация:</strong> ${recommendation}</p>
+        </article>
+      `;
+    }
+
+    function buildConclusion(row, previous) {
+      if (!previous) {
+        return `стартовый месяц в отчете: ${formatNumber.format(row.conversions)} конверсий при CPA ${formatMoneyPrecise.format(row.cpa)} и CTR ${formatPct.format(row.ctr)}.`;
+      }
+      const convDelta = row.conversions - previous.conversions;
+      const cpaDeltaPct = previous.cpa ? (row.cpa - previous.cpa) / previous.cpa : 0;
+      const ctrDelta = row.ctr - previous.ctr;
+      const conversionText = convDelta >= 0 ? `конверсии выросли на ${formatNumber.format(convDelta)}` : `конверсии снизились на ${formatNumber.format(Math.abs(convDelta))}`;
+      const cpaText = cpaDeltaPct <= -0.03 ? `CPA улучшился на ${formatDeltaPct.format(Math.abs(cpaDeltaPct))}` : cpaDeltaPct >= 0.03 ? `CPA ухудшился на ${formatDeltaPct.format(cpaDeltaPct)}` : "CPA почти не изменился";
+      const ctrText = Math.abs(ctrDelta) >= 0.003 ? `CTR ${ctrDelta > 0 ? "вырос" : "снизился"} на ${Math.abs(ctrDelta * 100).toFixed(2).replace(".", ",")} п.п.` : "CTR стабилен";
+      return `${conversionText}, ${cpaText}; ${ctrText}.`;
+    }
+
+    function buildRecommendation(row, previous, topConversion, topCpa, spendWithoutConversions) {
+      const ideas = [];
+      if (topConversion) {
+        ideas.push(`масштабировать ${escapeHtml(topConversion.campaign)} как главный источник конверсий (${formatNumber.format(topConversion.conversions)}).`);
+      }
+      if (topCpa && (!topConversion || topCpa.campaign !== topConversion.campaign)) {
+        ideas.push(`сохранить/усилить ${escapeHtml(topCpa.campaign)} из-за лучшего CPA ${formatMoneyPrecise.format(topCpa.cpa)}.`);
+      }
+      if (spendWithoutConversions && spendWithoutConversions.cost > row.cost * 0.03) {
+        ideas.push(`проверить ${escapeHtml(spendWithoutConversions.campaign)}: расход ${formatMoneyPrecise.format(spendWithoutConversions.cost)} без конверсий.`);
+      }
+      if (previous && row.conversions < previous.conversions && row.cost >= previous.cost * 0.95) {
+        ideas.push("перераспределить бюджет из слабых кампаний в кампании с конверсиями и пересмотреть ставки/запросы.");
+      }
+      if (!ideas.length) {
+        ideas.push("поддерживать текущую структуру и точечно тестировать расширение бюджета на кампаниях с конверсиями.");
+      }
+      return ideas.slice(0, 2).join(" ");
+    }
+
+    function renderNote(rows) {
+      const current = summarizeRows(rows);
+      const previousRows = getPreviousRows(rows);
+      const previous = summarizeRows(previousRows);
+      const period = getPeriodLabel(rows);
+      const canCompare = previousRows.length === rows.length && previousRows.length > 0;
+      document.getElementById("periodHint").textContent = canCompare ? "к предыдущему периоду" : "сводка";
+      if (!rows.length) {
+        document.getElementById("periodNote").textContent = "Недостаточно данных для сравнения.";
+        return;
+      }
+      if (!canCompare) {
+        document.getElementById("periodNote").innerHTML = `<strong>${period}</strong>: клики - <strong>${formatNumber.format(current.clicks)}</strong>, CTR - <strong>${formatPct.format(current.ctr)}</strong>, конверсии - <strong>${formatNumber.format(current.conversions)}</strong>, CPA - <strong>${formatMoneyPrecise.format(current.cpa)}</strong>.<br><br>Расход составил <strong>${formatMoneyPrecise.format(current.cost)}</strong>, показы - <strong>${formatNumber.format(current.impressions)}</strong>.`;
+        return;
+      }
+      document.getElementById("periodNote").innerHTML = `<strong>${period}</strong>: клики ${signed(formatNumber.format(current.clicks - previous.clicks))}, конверсии ${signed(formatNumber.format(current.conversions - previous.conversions))}, CPA ${signed(formatMoneyPrecise.format(current.cpa - previous.cpa))}.<br><br>Расход составил <strong>${formatMoneyPrecise.format(current.cost)}</strong>, CTR - <strong>${formatPct.format(current.ctr)}</strong>.`;
+    }
+
+    function getPeriodLabel(rows) {
+      if (!rows.length) return "период";
+      if (rows.length === 1) return rows[0].period;
+      if (state.range !== "all" && state.week === "all") return `${state.range} год`;
+      return "весь период";
+    }
+
+    function getPreviousRows(rows) {
+      const data = currentData();
+      if (!rows.length) return [];
+      if (rows.length === 1) {
+        const index = data.findIndex((item) => item.date === rows[0].date);
+        return index > 0 ? [data[index - 1]] : [];
+      }
+      if (state.range !== "all" && state.week === "all") {
+        const previousYear = Number(state.range) - 1;
+        return data.filter((item) => item.year === previousYear);
+      }
+      return [];
+    }
+
+    function renderTable(rows) {
+      document.getElementById("tableTitle").textContent = state.mode === "monthly" ? "Данные по месяцам" : "Данные по неделям";
+      document.getElementById("periodColumnTitle").textContent = state.mode === "monthly" ? "Месяц" : "Неделя";
+      document.getElementById("rowCount").textContent = `${rows.length} ${periodUnitShort()}`;
+      const detailRows = getMonthDetailRows(rows);
+      document.getElementById("dataRows").innerHTML = rows.map((item) => {
+        const hasDetails = detailRows.length > 0 && item.date === state.week;
+        const firstCell = hasDetails
+          ? `<span class="toggle-indicator">${monthDetailsOpen ? "−" : "+"}</span>${item.period}`
+          : item.period;
+        const totalClass = hasDetails ? "month-total-row" : "";
+        const totalAttrs = hasDetails ? 'data-month-toggle="true" title="Показать или скрыть недели месяца"' : "";
+        return `
+          <tr class="${totalClass}" ${totalAttrs}>
+            <td>${firstCell}</td><td>${formatNumber.format(item.impressions)}</td><td>${formatNumber.format(item.clicks)}</td><td>${formatPct.format(item.ctr)}</td><td>${formatMoneyPrecise.format(item.cost)}</td><td>${formatMoneyPrecise.format(item.cpc)}</td><td>${formatNumber.format(item.conversions)}</td><td>${item.cpa ? formatMoneyPrecise.format(item.cpa) : ""}</td>
+          </tr>
+          ${hasDetails && monthDetailsOpen ? detailRows.map((week) => `<tr class="week-detail-row"><td>${week.period}</td><td>${formatNumber.format(week.impressions)}</td><td>${formatNumber.format(week.clicks)}</td><td>${formatPct.format(week.ctr)}</td><td>${formatMoneyPrecise.format(week.cost)}</td><td>${formatMoneyPrecise.format(week.cpc)}</td><td>${formatNumber.format(week.conversions)}</td><td>${week.cpa ? formatMoneyPrecise.format(week.cpa) : ""}</td></tr>`).join("") : ""}
+        `;
+      }).join("");
+      document.querySelectorAll("[data-month-toggle]").forEach((row) => {
+        row.addEventListener("click", () => {
+          monthDetailsOpen = !monthDetailsOpen;
+          renderTable(rows);
+          updateFloatingTableHeader();
+        });
+      });
+    }
+
+    function updateFloatingTableHeader() {
+      const panel = document.querySelector(".table-panel");
+      const header = panel?.querySelector(".panel-header");
+      const spacer = document.getElementById("tableHeaderSpacer");
+      if (!panel || !header || !spacer) return;
+
+      header.classList.remove("is-floating", "is-bottom");
+      header.style.top = "";
+      header.style.left = "";
+      header.style.width = "";
+      spacer.style.display = "none";
+      spacer.style.height = "";
+
+      const panelRect = panel.getBoundingClientRect();
+      const headerHeight = header.offsetHeight;
+      const topbar = document.querySelector(".topbar");
+      const topOffset = window.matchMedia("(max-width: 760px)").matches ? 0 : Math.ceil(topbar?.getBoundingClientRect().height || 0);
+      const shouldFloat = panelRect.top < topOffset && panelRect.bottom - headerHeight > topOffset;
+      const shouldPinToBottom = panelRect.top < topOffset && panelRect.bottom - headerHeight <= topOffset && panelRect.bottom > topOffset;
+
+      if (shouldFloat) {
+        spacer.style.display = "block";
+        spacer.style.height = `${headerHeight}px`;
+        header.classList.add("is-floating");
+        header.style.top = `${topOffset}px`;
+        header.style.left = `${panelRect.left}px`;
+        header.style.width = `${panelRect.width}px`;
+      } else if (shouldPinToBottom) {
+        spacer.style.display = "block";
+        spacer.style.height = `${headerHeight}px`;
+        header.classList.add("is-bottom");
+      }
+    }
+
+    function renderChart(canvasId, rows, series, options = {}, hoverIndex = null) {
+      const canvas = document.getElementById(canvasId);
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(320, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(220, Math.floor(rect.height * dpr));
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const width = canvas.width / dpr;
+      const height = canvas.height / dpr;
+      ctx.clearRect(0, 0, width, height);
+      if (!rows.length) { drawEmpty(ctx, width, height); return; }
+      const padding = { top: 18, right: options.type === "dual" ? 48 : 18, bottom: 44, left: 58 };
+      const plot = { x: padding.left, y: padding.top, w: width - padding.left - padding.right, h: height - padding.top - padding.bottom };
+      const leftSeries = series.filter((item) => item.axis !== "right");
+      const rightSeries = series.filter((item) => item.axis === "right");
+      const leftScale = makeScale(rows, leftSeries);
+      const rightScale = rightSeries.length ? makeScale(rows, rightSeries) : null;
+      drawGrid(ctx, plot, leftScale, false, leftSeries[0]?.formatter);
+      if (rightScale) drawRightLabels(ctx, plot, rightScale, rightSeries[0]?.formatter);
+      drawXAxis(ctx, plot, rows);
+      series.forEach((item) => {
+        const scale = item.axis === "right" && rightScale ? rightScale : leftScale;
+        if (options.type === "bar" && series.length === 1) drawBars(ctx, plot, rows, item, scale);
+        else drawLine(ctx, plot, rows, item, scale);
+      });
+      if (hoverIndex !== null) drawHover(ctx, plot, rows, series, leftScale, rightScale, hoverIndex, options);
+      chartStates.set(canvas.id, { plot, rows, series, options, leftScale, rightScale });
+      bindTooltip(canvas);
+    }
+
+    function makeScale(rows, series) {
+      const values = rows.flatMap((row) => series.map((item) => row[item.key]).filter(Number.isFinite));
+      let min = Math.min(0, ...values);
+      let max = Math.max(...values, 1);
+      if (max === min) max = min + 1;
+      const pad = (max - min) * 0.1;
+      return { min, max: max + pad };
+    }
+
+    function xFor(index, count, plot) { return count === 1 ? plot.x + plot.w / 2 : plot.x + (plot.w / (count - 1)) * index; }
+    function yFor(value, plot, scale) { return plot.y + plot.h * (1 - ((value - scale.min) / (scale.max - scale.min))); }
+    function isSingleBarChart(options, series) { return options.type === "bar" && series.length === 1; }
+    function barMetrics(plot, rows) {
+      const gap = 6;
+      const slotW = plot.w / Math.max(rows.length, 1);
+      const barW = Math.max(5, slotW - gap);
+      return { gap, slotW, barW };
+    }
+    function barCenterX(plot, rows, index) {
+      const { gap, slotW, barW } = barMetrics(plot, rows);
+      return plot.x + slotW * index + gap / 2 + barW / 2;
+    }
+    function barIndexForX(plot, rows, x) {
+      const { gap, slotW, barW } = barMetrics(plot, rows);
+      const firstCenter = plot.x + gap / 2 + barW / 2;
+      return Math.max(0, Math.min(rows.length - 1, Math.round((x - firstCenter) / slotW)));
+    }
+
+    function drawGrid(ctx, plot, scale, right, formatter = compactNumber) {
+      ctx.strokeStyle = "#e8eef5"; ctx.lineWidth = 1; ctx.fillStyle = "#687386"; ctx.font = "12px Segoe UI, Arial"; ctx.textAlign = right ? "left" : "right"; ctx.textBaseline = "middle";
+      for (let i = 0; i <= 4; i++) {
+        const y = plot.y + (plot.h / 4) * i;
+        const value = scale.max - ((scale.max - scale.min) / 4) * i;
+        ctx.beginPath(); ctx.moveTo(plot.x, y); ctx.lineTo(plot.x + plot.w, y); ctx.stroke();
+        ctx.fillText(formatter(value), right ? plot.x + plot.w + 8 : plot.x - 8, y);
+      }
+    }
+
+    function drawRightLabels(ctx, plot, scale, formatter = compactNumber) {
+      ctx.fillStyle = "#687386"; ctx.font = "12px Segoe UI, Arial"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      for (let i = 0; i <= 4; i++) {
+        const y = plot.y + (plot.h / 4) * i;
+        const value = scale.max - ((scale.max - scale.min) / 4) * i;
+        ctx.fillText(formatter(value), plot.x + plot.w + 8, y);
+      }
+    }
+
+    function drawXAxis(ctx, plot, rows) {
+      ctx.fillStyle = "#687386"; ctx.font = "12px Segoe UI, Arial"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+      const step = Math.max(1, Math.ceil(rows.length / 8));
+      rows.forEach((row, index) => {
+        const isRegularTick = index % step === 0;
+        const isReadableLastTick = index === rows.length - 1 && (rows.length - 1) % step > Math.floor(step / 2);
+        if (!isRegularTick && !isReadableLastTick) return;
+        ctx.fillText(formatShortDate(row.date), xFor(index, rows.length, plot), plot.y + plot.h + 12);
+      });
+    }
+
+    function drawLine(ctx, plot, rows, item, scale) {
+      ctx.strokeStyle = item.color; ctx.lineWidth = 2.5; ctx.beginPath();
+      rows.forEach((row, index) => {
+        const x = xFor(index, rows.length, plot); const y = yFor(row[item.key], plot, scale);
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      rows.forEach((row, index) => {
+        const x = xFor(index, rows.length, plot); const y = yFor(row[item.key], plot, scale);
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = item.color; ctx.lineWidth = 2; ctx.stroke();
+      });
+    }
+
+    function drawBars(ctx, plot, rows, item, scale) {
+      const { gap, slotW, barW } = barMetrics(plot, rows);
+      ctx.fillStyle = item.color;
+      rows.forEach((row, index) => {
+        const x = plot.x + slotW * index + gap / 2;
+        const y = yFor(row[item.key], plot, scale);
+        ctx.fillRect(x, y, barW, plot.y + plot.h - y);
+      });
+    }
+
+    function drawHover(ctx, plot, rows, series, leftScale, rightScale, index, options = {}) {
+      const x = isSingleBarChart(options, series) ? barCenterX(plot, rows, index) : xFor(index, rows.length, plot);
+      ctx.strokeStyle = "rgba(29, 36, 48, 0.3)"; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x, plot.y); ctx.lineTo(x, plot.y + plot.h); ctx.stroke(); ctx.setLineDash([]);
+      series.forEach((item) => {
+        const scale = item.axis === "right" && rightScale ? rightScale : leftScale;
+        const y = yFor(rows[index][item.key], plot, scale);
+        ctx.fillStyle = item.color; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+
+    function bindTooltip(canvas) {
+      if (canvas.dataset.tooltipBound) return;
+      canvas.dataset.tooltipBound = "true";
+      canvas.addEventListener("mousemove", (event) => {
+        const chart = chartStates.get(canvas.id); if (!chart) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const { plot, rows, series } = chart;
+        if (x < plot.x || x > plot.x + plot.w || event.clientY - rect.top < plot.y || event.clientY - rect.top > plot.y + plot.h) { hideTooltip(); return; }
+        const index = isSingleBarChart(chart.options, series)
+          ? barIndexForX(plot, rows, x)
+          : Math.max(0, Math.min(rows.length - 1, Math.round(((x - plot.x) / plot.w) * (rows.length - 1))));
+        renderChart(canvas.id, rows, series, chart.options, index);
+        showTooltip(event, rows[index], series);
+      });
+      canvas.addEventListener("mouseleave", () => { hideTooltip(); const chart = chartStates.get(canvas.id); if (chart) renderChart(canvas.id, chart.rows, chart.series, chart.options); });
+    }
+
+    function showTooltip(event, row, series) {
+      const tooltip = document.getElementById("chartTooltip");
+      tooltip.innerHTML = `<strong>${row.period} ${row.year}</strong><br>${series.map((item) => `${item.label}: <strong>${(item.formatter || compactNumber)(row[item.key])}</strong>`).join("<br>")}`;
+      tooltip.style.display = "block";
+      const offset = 14; const box = tooltip.getBoundingClientRect();
+      tooltip.style.left = `${Math.min(window.innerWidth - box.width - 10, event.clientX + offset)}px`;
+      tooltip.style.top = `${Math.min(window.innerHeight - box.height - 10, event.clientY + offset)}px`;
+    }
+
+    function hideTooltip() { document.getElementById("chartTooltip").style.display = "none"; }
+
+    function drawEmpty(ctx, width, height) {
+      ctx.fillStyle = "#687386"; ctx.font = "14px Segoe UI, Arial"; ctx.textAlign = "center"; ctx.fillText("Нет данных для выбранного периода", width / 2, height / 2);
+    }
+
+    function compactNumber(value) {
+      const abs = Math.abs(value);
+      if (abs >= 1000000) return `${(value / 1000000).toFixed(1).replace(".", ",")} млн`;
+      if (abs >= 1000) return `${Math.round(value / 1000)} тыс.`;
+      return formatNumber.format(Math.round(value));
+    }
+
+    function compactMoney(value) {
+      if (Math.abs(value) >= 1000) return `${Math.round(value / 1000)} тыс. ₽`;
+      return `${Math.round(value)} ₽`;
+    }
+
+    function formatShortDate(date) {
+      const [, month, day] = date.match(/\d{4}-(\d{2})-(\d{2})/) || [];
+      return day && month ? `${day}.${month}` : date;
+    }
+    function periodUnitShort() { return state.mode === "monthly" ? "мес." : "нед."; }
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    }
+    function signed(value) { return String(value).startsWith("-") ? value : `+${value}`; }
+    function debounce(fn, wait) { let timer; return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); }; }
+
+    renderYearButtons();
+    updateWeekFilter();
+    render();
+  </script>
+</body>
+</html>
+
+

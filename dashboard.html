@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Стрит Медиа - дашборд динамики</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d2430;
+      --muted: #687386;
+      --line: #d9e1ea;
+      --panel: #ffffff;
+      --page: #f5f7fb;
+      --blue: #5f8ff6;
+      --teal: #008c8c;
+      --amber: #ffb100;
+      --rose: #bc4b51;
+      --green: #2e7d32;
+      --brand-soft: #fff8e6;
+      --brand-blue-soft: #edf3ff;
+      --shadow: 0 12px 30px rgba(23, 35, 52, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--page);
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 18px 28px;
+      background: rgba(255, 255, 255, 0.95);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 220px;
+    }
+
+    .brand-mark {
+      width: 164px;
+      max-width: 34vw;
+      height: auto;
+      display: block;
+    }
+
+    .brand-copy {
+      padding-left: 14px;
+      border-left: 1px solid #e7edf5;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .client-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 8px;
+      margin-top: 8px;
+      margin-left: -8px;
+      border-radius: 6px;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 650;
+      text-decoration: none;
+    }
+
+    .client-link:hover {
+      background: var(--brand-blue-soft);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .segmented {
+      display: inline-flex;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .segmented button {
+      min-width: 78px;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 0;
+      border-right: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .segmented button:last-child {
+      border-right: 0;
+    }
+
+    .segmented button.active {
+      background: linear-gradient(135deg, #4f82ef, #6a97f7);
+      color: #fff;
+    }
+
+    .select-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    select {
+      min-height: 38px;
+      padding: 7px 34px 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    main {
+      width: min(1480px, calc(100% - 36px));
+      margin: 22px auto 44px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .kpi {
+      min-height: 122px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .kpi:hover {
+      transform: translateY(-3px);
+      border-color: rgba(95, 143, 246, 0.42);
+      box-shadow: 0 18px 36px rgba(23, 35, 52, 0.12);
+    }
+
+    .kpi::before {
+      content: "";
+      display: block;
+      width: 34px;
+      height: 3px;
+      margin-bottom: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--amber), var(--blue));
+    }
+
+    .kpi .label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .kpi .value {
+      margin-top: 10px;
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 750;
+    }
+
+    .kpi .delta {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 650;
+      background: #eef3f7;
+    }
+
+    .delta.good {
+      color: #17643a;
+      background: #e8f5ee;
+    }
+
+    .delta.bad {
+      color: #8b2e33;
+      background: #faeaeb;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .panel:hover {
+      transform: translateY(-2px);
+      border-color: rgba(95, 143, 246, 0.34);
+      box-shadow: 0 16px 34px rgba(23, 35, 52, 0.11);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px 0;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+
+    .panel .hint {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .chart-box {
+      position: relative;
+      height: 292px;
+      padding: 8px 12px 14px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .chart-tooltip {
+      position: fixed;
+      z-index: 30;
+      display: none;
+      min-width: 168px;
+      max-width: 240px;
+      padding: 10px 12px;
+      border: 1px solid #d6e0eb;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: 0 14px 34px rgba(23, 35, 52, 0.16);
+      color: var(--ink);
+      font-size: 12px;
+      line-height: 1.35;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+
+    .chart-tooltip .tooltip-title {
+      margin-bottom: 7px;
+      font-weight: 750;
+    }
+
+    .chart-tooltip .tooltip-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 4px;
+      color: var(--muted);
+    }
+
+    .chart-tooltip .tooltip-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .summary {
+      display: grid;
+      gap: 16px;
+    }
+
+    .note {
+      padding: 16px;
+      line-height: 1.45;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .note strong {
+      color: var(--ink);
+    }
+
+    .table-panel {
+      margin-top: 16px;
+      overflow: hidden;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 520px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e6ebf0;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th:first-child,
+    td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      text-align: left;
+      background: #fff;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f6f8fb;
+      color: #354052;
+      font-weight: 700;
+    }
+
+    th:first-child {
+      z-index: 3;
+      background: #f6f8fb;
+    }
+
+    tbody tr:hover td {
+      background: #f8fbfd;
+    }
+
+    tbody tr:hover td:first-child {
+      background: #f8fbfd;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .kpi,
+      .panel {
+        transition: none;
+      }
+
+      .kpi:hover,
+      .panel:hover {
+        transform: none;
+      }
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 0 16px 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      background: var(--blue);
+    }
+
+    @media (max-width: 1100px) {
+      .topbar {
+        position: static;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .brand {
+        width: 100%;
+      }
+
+      .controls {
+        justify-content: flex-start;
+      }
+
+      .layout,
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      main {
+        width: calc(100% - 22px);
+        margin-top: 14px;
+      }
+
+      .topbar {
+        padding: 16px;
+      }
+
+      .brand h1 {
+        font-size: 21px;
+      }
+
+      .brand {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .brand-mark {
+        width: 150px;
+        max-width: 72vw;
+      }
+
+      .brand-copy {
+        padding-left: 0;
+        border-left: 0;
+      }
+
+      .segmented {
+        width: 100%;
+      }
+
+      .segmented button {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .select-wrap {
+        width: 100%;
+      }
+
+      select {
+        width: 100%;
+      }
+
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-mark" src="assets/a1-logo.png" alt="А1 Интернет Эксперт">
+        <div class="brand-copy">
+          <h1>Стрит Медиа</h1>
+          <p>Динамика рекламных показателей по месяцам в Яндекс Директе</p>
+          <a class="client-link" href="https://sm-nv.ru/">sm-nv.ru</a>
+        </div>
+      </div>
+      <div class="controls" aria-label="Фильтры дашборда">
+        <div class="segmented" role="group" aria-label="Период">
+          <button class="active" type="button" data-range="all">Все</button>
+          <button type="button" data-range="2024">2024</button>
+          <button type="button" data-range="2025">2025</button>
+          <button type="button" data-range="2026">2026</button>
+        </div>
+        <label class="select-wrap">
+          Месяц
+          <select id="monthFilter">
+            <option value="all">Все месяцы</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <main>
+      <section class="kpi-grid" id="kpiGrid" aria-label="Ключевые показатели"></section>
+
+      <section class="layout">
+        <div class="chart-grid">
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Показы и клики</h2>
+              <span class="hint">линии</span>
+            </div>
+            <div class="chart-box"><canvas id="trafficChart"></canvas></div>
+            <div class="legend">
+              <span><i class="swatch" style="background: var(--blue)"></i>Показы</span>
+              <span><i class="swatch" style="background: var(--teal)"></i>Клики</span>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Расход</h2>
+              <span class="hint">столбцы</span>
+            </div>
+            <div class="chart-box"><canvas id="costChart"></canvas></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <h2>CTR и CPC</h2>
+              <span class="hint">две шкалы</span>
+            </div>
+            <div class="chart-box"><canvas id="efficiencyChart"></canvas></div>
+            <div class="legend">
+              <span><i class="swatch" style="background: var(--green)"></i>CTR</span>
+              <span><i class="swatch" style="background: var(--rose)"></i>CPC</span>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Средние позиции</h2>
+              <span class="hint">с мая 2025</span>
+            </div>
+            <div class="chart-box"><canvas id="positionChart"></canvas></div>
+            <div class="legend">
+              <span><i class="swatch" style="background: var(--amber)"></i>Позиция показа</span>
+              <span><i class="swatch" style="background: var(--blue)"></i>Позиция клика</span>
+            </div>
+          </article>
+        </div>
+
+        <aside class="summary">
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Выбранный период</h2>
+              <span class="hint" id="periodHint">сводка</span>
+            </div>
+            <div class="note" id="lastMonthNote"></div>
+          </article>
+        </aside>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-header">
+          <h2>Данные по месяцам</h2>
+          <span class="hint" id="rowCount"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Месяц</th>
+                <th>Показы</th>
+                <th>Клики</th>
+                <th>CTR</th>
+                <th>Расход</th>
+                <th>CPC</th>
+                <th>Ср. позиция показа</th>
+                <th>Ср. позиция клика</th>
+              </tr>
+            </thead>
+            <tbody id="dataRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div class="chart-tooltip" id="chartTooltip" role="status" aria-live="polite"></div>
+
+  <script>
+    const data = [
+      { month: "Апрель 2023", date: "2023-04-01", year: 2023, impressions: 28523, clicks: 379, ctr: 0.0133, cost: 11500, cpc: 25.29 },
+      { month: "Май 2023", date: "2023-05-01", year: 2023, impressions: 20613, clicks: 378, ctr: 0.0183, cost: 7920.7, cpc: 17.46 },
+      { month: "Июнь 2023", date: "2023-06-01", year: 2023, impressions: 29694, clicks: 558, ctr: 0.0188, cost: 12681.97, cpc: 18.94 },
+      { month: "Июль 2023", date: "2023-07-01", year: 2023, impressions: 51420, clicks: 790, ctr: 0.0154, cost: 13100.13, cpc: 13.82 },
+      { month: "Август 2023", date: "2023-08-01", year: 2023, impressions: 29682, clicks: 751, ctr: 0.0253, cost: 12129.69, cpc: 13.46 },
+      { month: "Сентябрь 2023", date: "2023-09-01", year: 2023, impressions: 64649, clicks: 1288, ctr: 0.0199, cost: 11666.93, cpc: 7.55 },
+      { month: "Октябрь 2023", date: "2023-10-01", year: 2023, impressions: 19186, clicks: 390, ctr: 0.0203, cost: 11493.03, cpc: 24.56 },
+      { month: "Ноябрь 2023", date: "2023-11-01", year: 2023, impressions: 53584, clicks: 1003, ctr: 0.0187, cost: 11507.54, cpc: 11.47 },
+      { month: "Декабрь 2023", date: "2023-12-01", year: 2023, impressions: 40850, clicks: 1064, ctr: 0.026, cost: 11434.92, cpc: 10.75 },
+      { month: "Январь 2024", date: "2024-01-01", year: 2024, impressions: 37934, clicks: 552, ctr: 0.0146, cost: 11169.4, cpc: 20.23 },
+      { month: "Февраль 2024", date: "2024-02-01", year: 2024, impressions: 28887, clicks: 378, ctr: 0.0131, cost: 11830.59, cpc: 31.3 },
+      { month: "Март 2024", date: "2024-03-01", year: 2024, impressions: 12991, clicks: 297, ctr: 0.0229, cost: 11498.24, cpc: 38.71 },
+      { month: "Апрель 2024", date: "2024-04-01", year: 2024, impressions: 13476, clicks: 344, ctr: 0.0255, cost: 11501.74, cpc: 33.44 },
+      { month: "Май 2024", date: "2024-05-01", year: 2024, impressions: 17745, clicks: 493, ctr: 0.0278, cost: 11500, cpc: 23.33 },
+      { month: "Июнь 2024", date: "2024-06-01", year: 2024, impressions: 14424, clicks: 307, ctr: 0.0213, cost: 11500, cpc: 37.46 },
+      { month: "Июль 2024", date: "2024-07-01", year: 2024, impressions: 58805, clicks: 1045, ctr: 0.0178, cost: 11920, cpc: 11.41 },
+      { month: "Август 2024", date: "2024-08-01", year: 2024, impressions: 32343, clicks: 682, ctr: 0.0211, cost: 11080, cpc: 16.25 },
+      { month: "Сентябрь 2024", date: "2024-09-01", year: 2024, impressions: 35983, clicks: 490, ctr: 0.0136, cost: 11500, cpc: 23.47 },
+      { month: "Октябрь 2024", date: "2024-10-01", year: 2024, impressions: 66503, clicks: 892, ctr: 0.0134, cost: 11519.23, cpc: 12.91 },
+      { month: "Ноябрь 2024", date: "2024-11-01", year: 2024, impressions: 29197, clicks: 713, ctr: 0.0244, cost: 11504.75, cpc: 16.14 },
+      { month: "Декабрь 2024", date: "2024-12-01", year: 2024, impressions: 72819, clicks: 1011, ctr: 0.0139, cost: 16500, cpc: 16.32 },
+      { month: "Январь 2025", date: "2025-01-01", year: 2025, impressions: 32354, clicks: 1728, ctr: 0.0534, cost: 16500, cpc: 9.55 },
+      { month: "Февраль 2025", date: "2025-02-01", year: 2025, impressions: 862, clicks: 91, ctr: 0.1056, cost: 16500, cpc: 181.32 },
+      { month: "Март 2025", date: "2025-03-01", year: 2025, impressions: 1036, clicks: 79, ctr: 0.0763, cost: 16500, cpc: 208.86 },
+      { month: "Апрель 2025", date: "2025-04-01", year: 2025, impressions: 991, clicks: 87, ctr: 0.0878, cost: 16503.44, cpc: 189.69 },
+      { month: "Май 2025", date: "2025-05-01", year: 2025, impressions: 868, clicks: 81, ctr: 0.0933, cost: 16500, cpc: 203.7, posShow: 2.79, posClick: 1.81 },
+      { month: "Июнь 2025", date: "2025-06-01", year: 2025, impressions: 764, clicks: 69, ctr: 0.0903, cost: 16500, cpc: 239.13, posShow: 2.72, posClick: 1.78 },
+      { month: "Июль 2025", date: "2025-07-01", year: 2025, impressions: 1326, clicks: 99, ctr: 0.0747, cost: 16500, cpc: 166.67, posShow: 2.62, posClick: 1.45 },
+      { month: "Август 2025", date: "2025-08-01", year: 2025, impressions: 686, clicks: 88, ctr: 0.1283, cost: 16500, cpc: 187.5, posShow: 2.62, posClick: 1.45 },
+      { month: "Сентябрь 2025", date: "2025-09-01", year: 2025, impressions: 805, clicks: 81, ctr: 0.1006, cost: 16499.73, cpc: 203.7, posShow: 2.72, posClick: 1.56 },
+      { month: "Октябрь 2025", date: "2025-10-01", year: 2025, impressions: 1452, clicks: 83, ctr: 0.0572, cost: 19800, cpc: 238.55, posShow: 3.18, posClick: 1.76 },
+      { month: "Ноябрь 2025", date: "2025-11-01", year: 2025, impressions: 1595, clicks: 122, ctr: 0.0765, cost: 26877.05, cpc: 220.3, posShow: 3.18, posClick: 1.76 },
+      { month: "Декабрь 2025", date: "2025-12-01", year: 2025, impressions: 2438, clicks: 190, ctr: 0.0779, cost: 31509.78, cpc: 165.84, posShow: 2.85, posClick: 1.74 },
+      { month: "Январь 2026", date: "2026-01-01", year: 2026, impressions: 1677, clicks: 106, ctr: 0.0632, cost: 18787.25, cpc: 177.24, posShow: 2.73, posClick: 1.8 },
+      { month: "Февраль 2026", date: "2026-02-01", year: 2026, impressions: 2210, clicks: 142, ctr: 0.0643, cost: 29768, cpc: 209.63, posShow: 3.12, posClick: 1.9 },
+      { month: "Март 2026", date: "2026-03-01", year: 2026, impressions: 1785, clicks: 133, ctr: 0.0745, cost: 25728.15, cpc: 193.44, posShow: 2.76, posClick: 1.74 },
+      { month: "Апрель 2026", date: "2026-04-01", year: 2026, impressions: 1822, clicks: 153, ctr: 0.084, cost: 26848.03, cpc: 175.48, posShow: 2.85, posClick: 1.91 }
+    ];
+
+    const colors = {
+      impressions: "#2364aa",
+      clicks: "#008c8c",
+      ctr: "#2e7d32",
+      cost: "#d28b00",
+      cpc: "#bc4b51",
+      posShow: "#d28b00",
+      posClick: "#2364aa"
+    };
+
+    const formatNumber = new Intl.NumberFormat("ru-RU");
+    const formatMoney = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 });
+    const formatMoneyPrecise = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatPct = new Intl.NumberFormat("ru-RU", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatDeltaPct = new Intl.NumberFormat("ru-RU", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+    const state = {
+      range: "all",
+      month: "all"
+    };
+    const chartStates = new Map();
+
+    document.querySelectorAll("[data-range]").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll("[data-range]").forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+        state.range = button.dataset.range;
+        state.month = "all";
+        updateMonthFilter();
+        render();
+      });
+    });
+
+    document.getElementById("monthFilter").addEventListener("change", (event) => {
+      state.month = event.target.value;
+      render();
+    });
+
+    window.addEventListener("resize", debounce(render, 120));
+
+    function updateMonthFilter() {
+      const monthFilter = document.getElementById("monthFilter");
+      const months = data.filter((item) => state.range === "all" || String(item.year) === state.range);
+      monthFilter.innerHTML = [
+        '<option value="all">Все месяцы</option>',
+        ...months.map((item) => `<option value="${item.date}">${item.month}</option>`)
+      ].join("");
+      monthFilter.value = state.month;
+    }
+
+    function getFilteredData() {
+      return data.filter((item) => {
+        const yearMatches = state.range === "all" || String(item.year) === state.range;
+        const monthMatches = state.month === "all" || item.date === state.month;
+        return yearMatches && monthMatches;
+      });
+    }
+
+    function render() {
+      const filtered = getFilteredData();
+      renderKpis(filtered);
+      renderTable(filtered);
+      renderLastMonth(filtered);
+      renderChart("trafficChart", filtered, [
+        { key: "impressions", label: "Показы", color: colors.impressions },
+        { key: "clicks", label: "Клики", color: colors.clicks }
+      ], { type: "line", compactLabels: true });
+      renderChart("costChart", filtered, [
+        { key: "cost", label: "Расход", color: colors.cost }
+      ], { type: "bar", valueFormatter: compactMoney });
+      renderChart("efficiencyChart", filtered, [
+        { key: "ctr", label: "CTR", color: colors.ctr, axis: "left", formatter: (v) => `${(v * 100).toFixed(1)}%` },
+        { key: "cpc", label: "CPC", color: colors.cpc, axis: "right", formatter: (v) => Math.round(v).toString() }
+      ], { type: "dual" });
+      renderChart("positionChart", filtered.filter((item) => Number.isFinite(item.posShow)), [
+        { key: "posShow", label: "Позиция показа", color: colors.posShow },
+        { key: "posClick", label: "Позиция клика", color: colors.posClick }
+      ], { type: "line", invert: true });
+    }
+
+    function renderKpis(rows) {
+      const currentSummary = summarizeRows(rows);
+      const previousRows = getPreviousRows(rows);
+      const previousSummary = summarizeRows(previousRows);
+      const period = getPeriodLabel(rows);
+      const canCompare = previousRows.length === rows.length && previousRows.length > 0;
+      const metrics = [
+        { key: "impressions", label: "Показы", formatter: formatNumber.format },
+        { key: "clicks", label: "Клики", formatter: formatNumber.format },
+        { key: "ctr", label: "CTR", formatter: formatPct.format },
+        { key: "cost", label: "Расход", formatter: formatMoney.format },
+        { key: "cpc", label: "CPC", formatter: formatMoneyPrecise.format, inverse: true }
+      ];
+
+      document.getElementById("kpiGrid").innerHTML = metrics.map((metric) => {
+        const current = currentSummary[metric.key] || 0;
+        const prev = previousSummary[metric.key] || 0;
+        const delta = current - prev;
+        const pct = prev ? delta / prev : 0;
+        const good = metric.inverse ? delta <= 0 : delta >= 0;
+        const deltaText = canCompare
+          ? `${delta >= 0 ? "+" : ""}${metric.formatter(delta)} / ${formatDeltaPct.format(pct)}`
+          : `за ${rows.length} мес.`;
+        return `
+          <article class="kpi">
+            <div class="label">${metric.label}, ${period}</div>
+            <div class="value">${metric.formatter(current)}</div>
+            <div class="delta ${canCompare ? (good ? "good" : "bad") : ""}">${deltaText}</div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderLastMonth(rows) {
+      const currentSummary = summarizeRows(rows);
+      const previousRows = getPreviousRows(rows);
+      const previousSummary = summarizeRows(previousRows);
+      const period = getPeriodLabel(rows);
+      const canCompare = previousRows.length === rows.length && previousRows.length > 0;
+
+      document.getElementById("periodHint").textContent = canCompare ? "к предыдущему периоду" : "сводка";
+
+      if (!rows.length) {
+        document.getElementById("lastMonthNote").textContent = "Недостаточно данных для сравнения.";
+        return;
+      }
+
+      if (!canCompare) {
+        document.getElementById("lastMonthNote").innerHTML = `
+          <strong>${period}</strong>: клики - <strong>${formatNumber.format(currentSummary.clicks)}</strong>, CTR - <strong>${formatPct.format(currentSummary.ctr)}</strong>, CPC - <strong>${formatMoneyPrecise.format(currentSummary.cpc)}</strong>.<br><br>
+          Расход составил <strong>${formatMoneyPrecise.format(currentSummary.cost)}</strong>, показы - <strong>${formatNumber.format(currentSummary.impressions)}</strong>.
+        `;
+        return;
+      }
+
+      const clicksDelta = currentSummary.clicks - previousSummary.clicks;
+      const ctrDelta = currentSummary.ctr - previousSummary.ctr;
+      const cpcDelta = currentSummary.cpc - previousSummary.cpc;
+      document.getElementById("lastMonthNote").innerHTML = `
+        <strong>${period}</strong>: клики ${signed(formatNumber.format(clicksDelta))}, CTR ${signed((ctrDelta * 100).toFixed(2))} п.п., CPC ${signed(formatMoneyPrecise.format(cpcDelta))}.<br><br>
+        Расход составил <strong>${formatMoneyPrecise.format(currentSummary.cost)}</strong>, показы - <strong>${formatNumber.format(currentSummary.impressions)}</strong>.
+      `;
+    }
+
+    function summarizeRows(rows) {
+      const totals = rows.reduce((acc, item) => {
+        acc.impressions += item.impressions || 0;
+        acc.clicks += item.clicks || 0;
+        acc.cost += item.cost || 0;
+        return acc;
+      }, { impressions: 0, clicks: 0, cost: 0 });
+
+      return {
+        impressions: totals.impressions,
+        clicks: totals.clicks,
+        cost: totals.cost,
+        ctr: totals.impressions ? totals.clicks / totals.impressions : 0,
+        cpc: totals.clicks ? totals.cost / totals.clicks : 0
+      };
+    }
+
+    function getPeriodLabel(rows) {
+      if (!rows.length) return "период";
+      if (rows.length === 1) return rows[0].month;
+      if (state.range !== "all" && state.month === "all") return `${state.range} год`;
+      return "весь период";
+    }
+
+    function getPreviousRows(rows) {
+      if (!rows.length) return [];
+      if (rows.length === 1) {
+        const index = data.findIndex((item) => item.date === rows[0].date);
+        return index > 0 ? [data[index - 1]] : [];
+      }
+      if (state.range !== "all" && state.month === "all") {
+        const previousYear = Number(state.range) - 1;
+        return data.filter((item) => item.year === previousYear);
+      }
+      return [];
+    }
+
+    function renderTable(rows) {
+      document.getElementById("rowCount").textContent = `${rows.length} мес.`;
+      document.getElementById("dataRows").innerHTML = rows.map((item) => `
+        <tr>
+          <td>${item.month}</td>
+          <td>${formatNumber.format(item.impressions)}</td>
+          <td>${formatNumber.format(item.clicks)}</td>
+          <td>${formatPct.format(item.ctr)}</td>
+          <td>${formatMoneyPrecise.format(item.cost)}</td>
+          <td>${formatMoneyPrecise.format(item.cpc)}</td>
+          <td>${item.posShow ? item.posShow.toFixed(2).replace(".", ",") : ""}</td>
+          <td>${item.posClick ? item.posClick.toFixed(2).replace(".", ",") : ""}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderChart(canvasId, rows, series, options = {}, hoverIndex = null) {
+      const canvas = document.getElementById(canvasId);
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(320, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(220, Math.floor(rect.height * dpr));
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const width = canvas.width / dpr;
+      const height = canvas.height / dpr;
+      ctx.clearRect(0, 0, width, height);
+
+      if (!rows.length) {
+        drawEmpty(ctx, width, height);
+        setupChartTooltip(canvas);
+        return;
+      }
+
+      const padding = { top: 18, right: options.type === "dual" ? 46 : 18, bottom: 42, left: 58 };
+      const plot = {
+        x: padding.left,
+        y: padding.top,
+        w: width - padding.left - padding.right,
+        h: height - padding.top - padding.bottom
+      };
+
+      const leftSeries = series.filter((item) => item.axis !== "right");
+      const rightSeries = series.filter((item) => item.axis === "right");
+      const leftScale = makeScale(rows, leftSeries, Boolean(options.invert));
+      const rightScale = rightSeries.length ? makeScale(rows, rightSeries, false) : null;
+
+      drawGrid(ctx, plot, leftScale, leftSeries[0]?.formatter || options.valueFormatter);
+      if (rightScale) drawRightAxis(ctx, plot, rightScale, rightSeries[0]?.formatter);
+      drawLabels(ctx, plot, rows);
+
+      series.forEach((item) => {
+        const scale = item.axis === "right" && rightScale ? rightScale : leftScale;
+        if (options.type === "bar" || (options.type !== "dual" && series.length === 1 && options.type === "bar")) {
+          drawBars(ctx, plot, rows, item, scale);
+        } else {
+          drawLine(ctx, plot, rows, item, scale);
+        }
+      });
+
+      if (hoverIndex !== null) {
+        drawHover(ctx, plot, rows, series, leftScale, rightScale, hoverIndex);
+      }
+
+      chartStates.set(canvasId, { rows, series, options, plot });
+      setupChartTooltip(canvas);
+    }
+
+    function makeScale(rows, series, invert) {
+      const values = rows.flatMap((row) => series.map((item) => row[item.key]).filter(Number.isFinite));
+      let min = Math.min(...values);
+      let max = Math.max(...values);
+      if (min === max) {
+        min = min - 1;
+        max = max + 1;
+      }
+      const span = max - min;
+      const padding = span * 0.12;
+      return { min: Math.max(0, min - padding), max: max + padding, invert };
+    }
+
+    function yFor(value, plot, scale) {
+      const pct = (value - scale.min) / (scale.max - scale.min);
+      const adjusted = scale.invert ? pct : 1 - pct;
+      return plot.y + adjusted * plot.h;
+    }
+
+    function xFor(index, count, plot) {
+      if (count === 1) return plot.x + plot.w / 2;
+      return plot.x + (index / (count - 1)) * plot.w;
+    }
+
+    function drawGrid(ctx, plot, scale, formatter) {
+      ctx.strokeStyle = "#e6ebf0";
+      ctx.lineWidth = 1;
+      ctx.fillStyle = "#687386";
+      ctx.font = "12px Segoe UI, Arial";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      for (let i = 0; i <= 4; i += 1) {
+        const y = plot.y + (plot.h / 4) * i;
+        const value = scale.max - ((scale.max - scale.min) / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(plot.x, y);
+        ctx.lineTo(plot.x + plot.w, y);
+        ctx.stroke();
+        ctx.fillText(formatAxis(value, formatter), plot.x - 8, y);
+      }
+    }
+
+    function drawRightAxis(ctx, plot, scale, formatter) {
+      ctx.fillStyle = "#687386";
+      ctx.font = "12px Segoe UI, Arial";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      for (let i = 0; i <= 4; i += 1) {
+        const y = plot.y + (plot.h / 4) * i;
+        const value = scale.max - ((scale.max - scale.min) / 4) * i;
+        ctx.fillText(formatAxis(value, formatter), plot.x + plot.w + 8, y);
+      }
+    }
+
+    function drawLabels(ctx, plot, rows) {
+      ctx.fillStyle = "#687386";
+      ctx.font = "11px Segoe UI, Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      const step = Math.ceil(rows.length / 7);
+      rows.forEach((item, index) => {
+        if (index % step !== 0 && index !== rows.length - 1) return;
+        const x = xFor(index, rows.length, plot);
+        ctx.fillText(shortMonth(item.month), x, plot.y + plot.h + 12);
+      });
+    }
+
+    function drawLine(ctx, plot, rows, item, scale) {
+      ctx.strokeStyle = item.color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      let hasPoint = false;
+      rows.forEach((row, index) => {
+        const value = row[item.key];
+        if (!Number.isFinite(value)) return;
+        const x = xFor(index, rows.length, plot);
+        const y = yFor(value, plot, scale);
+        if (!hasPoint) {
+          ctx.moveTo(x, y);
+          hasPoint = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.stroke();
+
+      ctx.fillStyle = item.color;
+      rows.forEach((row, index) => {
+        const value = row[item.key];
+        if (!Number.isFinite(value)) return;
+        const x = xFor(index, rows.length, plot);
+        const y = yFor(value, plot, scale);
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawBars(ctx, plot, rows, item, scale) {
+      const gap = 6;
+      const barW = Math.max(5, plot.w / rows.length - gap);
+      ctx.fillStyle = item.color;
+      rows.forEach((row, index) => {
+        const value = row[item.key];
+        if (!Number.isFinite(value)) return;
+        const x = plot.x + (plot.w / rows.length) * index + gap / 2;
+        const y = yFor(value, plot, scale);
+        ctx.fillRect(x, y, barW, plot.y + plot.h - y);
+      });
+    }
+
+    function drawHover(ctx, plot, rows, series, leftScale, rightScale, index) {
+      const row = rows[index];
+      if (!row) return;
+      const x = xFor(index, rows.length, plot);
+      ctx.save();
+      ctx.strokeStyle = "rgba(29, 36, 48, 0.28)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(x, plot.y);
+      ctx.lineTo(x, plot.y + plot.h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      series.forEach((item) => {
+        const value = row[item.key];
+        if (!Number.isFinite(value)) return;
+        const scale = item.axis === "right" && rightScale ? rightScale : leftScale;
+        const y = yFor(value, plot, scale);
+        ctx.fillStyle = "#fff";
+        ctx.strokeStyle = item.color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    function setupChartTooltip(canvas) {
+      if (canvas.dataset.tooltipBound) return;
+      canvas.dataset.tooltipBound = "true";
+
+      canvas.addEventListener("mousemove", (event) => {
+        const chart = chartStates.get(canvas.id);
+        if (!chart || !chart.rows.length) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const { plot, rows, series, options } = chart;
+
+        if (x < plot.x || x > plot.x + plot.w || y < plot.y || y > plot.y + plot.h) {
+          hideChartTooltip(canvas.id, rows, series, options);
+          return;
+        }
+
+        const rawIndex = rows.length === 1 ? 0 : Math.round(((x - plot.x) / plot.w) * (rows.length - 1));
+        const index = Math.max(0, Math.min(rows.length - 1, rawIndex));
+        renderChart(canvas.id, rows, series, options, index);
+        showChartTooltip(event, rows[index], series);
+      });
+
+      canvas.addEventListener("mouseleave", () => {
+        const chart = chartStates.get(canvas.id);
+        if (!chart) return;
+        hideChartTooltip(canvas.id, chart.rows, chart.series, chart.options);
+      });
+    }
+
+    function showChartTooltip(event, row, series) {
+      const tooltip = document.getElementById("chartTooltip");
+      tooltip.innerHTML = `
+        <div class="tooltip-title">${row.month}</div>
+        ${series.map((item) => {
+          const value = row[item.key];
+          if (!Number.isFinite(value)) return "";
+          return `
+            <div class="tooltip-row">
+              <span class="tooltip-name"><i class="swatch" style="background:${item.color}"></i>${item.label}</span>
+              <strong>${formatMetricValue(item.key, value)}</strong>
+            </div>
+          `;
+        }).join("")}
+      `;
+      tooltip.style.display = "block";
+      const offset = 14;
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const left = Math.min(window.innerWidth - tooltipRect.width - 10, event.clientX + offset);
+      const top = Math.min(window.innerHeight - tooltipRect.height - 10, event.clientY + offset);
+      tooltip.style.left = `${Math.max(10, left)}px`;
+      tooltip.style.top = `${Math.max(10, top)}px`;
+    }
+
+    function hideChartTooltip(canvasId, rows, series, options) {
+      document.getElementById("chartTooltip").style.display = "none";
+      if (rows?.length) renderChart(canvasId, rows, series, options);
+    }
+
+    function drawEmpty(ctx, width, height) {
+      ctx.fillStyle = "#687386";
+      ctx.font = "14px Segoe UI, Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("Нет данных для выбранного периода", width / 2, height / 2);
+    }
+
+    function formatMetricValue(key, value) {
+      if (key === "ctr") return formatPct.format(value);
+      if (key === "cost" || key === "cpc") return formatMoneyPrecise.format(value);
+      if (key === "posShow" || key === "posClick") return value.toFixed(2).replace(".", ",");
+      return formatNumber.format(value);
+    }
+
+    function formatAxis(value, formatter) {
+      if (formatter) return formatter(value);
+      if (Math.abs(value) >= 1000000) return `${(value / 1000000).toFixed(1)} млн`;
+      if (Math.abs(value) >= 1000) return `${Math.round(value / 1000)} тыс`;
+      if (Math.abs(value) < 1) return value.toFixed(2).replace(".", ",");
+      return Math.round(value).toString();
+    }
+
+    function compactMoney(value) {
+      if (value >= 1000) return `${Math.round(value / 1000)} тыс`;
+      return Math.round(value).toString();
+    }
+
+    function shortMonth(month) {
+      const [name, year] = month.split(" ");
+      return `${name.slice(0, 3)} ${year.slice(2)}`;
+    }
+
+    function signed(value) {
+      return String(value).startsWith("-") ? value : `+${value}`;
+    }
+
+    function debounce(fn, delay) {
+      let id;
+      return (...args) => {
+        window.clearTimeout(id);
+        id = window.setTimeout(() => fn(...args), delay);
+      };
+    }
+
+    updateMonthFilter();
+    render();
+  </script>
+</body>
+</html>
