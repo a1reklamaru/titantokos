@@ -104,8 +104,9 @@ function Parse-ClientSheet($Path) {
   $currentPeriod = $null
   $currentDate = $null
   $inCampaignBlock = $false
-  $weekly = @()
-  $campaignsWeekly = @()
+  $currentCampaignRows = @()
+  $weeklyByDate = [ordered]@{}
+  $campaignsByDate = [ordered]@{}
 
   foreach ($row in $rows) {
     $first = Get-FirstFilledCell $row
@@ -114,6 +115,7 @@ function Parse-ClientSheet($Path) {
     if ($first -match "^\d{4}$") {
       $currentYear = [int]$first
       $inCampaignBlock = $false
+      $currentCampaignRows = @()
       continue
     }
 
@@ -129,13 +131,15 @@ function Parse-ClientSheet($Path) {
 
     if ($first -eq "Итого") {
       if ($null -eq $currentDate) { continue }
-      $weekly += New-MetricRow $currentPeriod $currentDate (Convert-ToInt $row[1]) (Convert-ToInt $row[2]) (Convert-ToNumber $row[5]) (Convert-ToInt $row[6])
+      $dateKey = $currentDate.ToString("yyyy-MM-dd")
+      $weeklyByDate[$dateKey] = New-MetricRow $currentPeriod $currentDate (Convert-ToInt $row[1]) (Convert-ToInt $row[2]) (Convert-ToNumber $row[5]) (Convert-ToInt $row[6])
+      $campaignsByDate[$dateKey] = @($currentCampaignRows)
       $inCampaignBlock = $false
       continue
     }
 
     if ($inCampaignBlock -and $null -ne $currentDate) {
-      $campaignsWeekly += [ordered]@{
+      $campaignRow = [ordered]@{
         campaign = $first
         date = $currentDate.ToString("yyyy-MM-dd")
         year = [int]$currentDate.Year
@@ -147,10 +151,10 @@ function Parse-ClientSheet($Path) {
         conversions = Convert-ToInt $row[6]
         cpa = 0
       }
-      $last = $campaignsWeekly[$campaignsWeekly.Count - 1]
-      $last.ctr = if ($last.impressions) { [Math]::Round($last.clicks / $last.impressions, 6) } else { 0 }
-      $last.cpc = if ($last.clicks) { [Math]::Round($last.cost / $last.clicks, 2) } else { 0 }
-      $last.cpa = if ($last.conversions) { [Math]::Round($last.cost / $last.conversions, 2) } else { 0 }
+      $campaignRow.ctr = if ($campaignRow.impressions) { [Math]::Round($campaignRow.clicks / $campaignRow.impressions, 6) } else { 0 }
+      $campaignRow.cpc = if ($campaignRow.clicks) { [Math]::Round($campaignRow.cost / $campaignRow.clicks, 2) } else { 0 }
+      $campaignRow.cpa = if ($campaignRow.conversions) { [Math]::Round($campaignRow.cost / $campaignRow.conversions, 2) } else { 0 }
+      $currentCampaignRows += $campaignRow
       continue
     }
 
@@ -162,8 +166,19 @@ function Parse-ClientSheet($Path) {
     if ($null -ne $currentYear -and $first -match "^\d{1,2}" -and $first -match "(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)") {
       $currentPeriod = $first
       $currentDate = Get-PeriodStartDate $first $currentYear
+      $currentCampaignRows = @()
       $inCampaignBlock = $false
     }
+  }
+
+  $weekly = @()
+  foreach ($dateKey in ($weeklyByDate.Keys | Sort-Object)) {
+    $weekly += $weeklyByDate[$dateKey]
+  }
+
+  $campaignsWeekly = @()
+  foreach ($dateKey in ($campaignsByDate.Keys | Sort-Object)) {
+    $campaignsWeekly += $campaignsByDate[$dateKey]
   }
 
   return @{
@@ -262,12 +277,13 @@ finally {
 
 $json = $clients | ConvertTo-Json -Depth 100 -Compress
 $html = [IO.File]::ReadAllText((Resolve-Path $DashboardPath), [Text.Encoding]::UTF8)
-$pattern = '(?s)const clients = .*?;\s+const colors ='
-$replacement = "const clients = $json;`r`n    const colors ="
-$updated = [regex]::Replace($html, $pattern, $replacement, 1)
-if ($updated -eq $html) {
+$pattern = '(?s)const clients = .*?;\s+const clientLabels ='
+$replacement = "const clients = $json;`r`n    const clientLabels ="
+$match = [regex]::Match($html, $pattern)
+if (-not $match.Success) {
   throw "Не найден блок const clients в titan-tokos-dashboard.html"
 }
+$updated = [regex]::Replace($html, $pattern, $replacement, 1)
 [IO.File]::WriteAllText((Resolve-Path $DashboardPath), $updated, [Text.UTF8Encoding]::new($false))
 
 $status = git status --short -- titan-tokos-dashboard.html
