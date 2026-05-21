@@ -1,0 +1,3 @@
+display_name: Titan/Tokos Dashboard Updater
+short_description: Refreshes the Titan and Tokos dashboard from Google Sheets and publishes it.
+default_prompt: Update the Titan/Tokos dashboard from Google Sheets, commit any data changes, and push the GitHub Pages site.
