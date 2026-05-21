@@ -367,7 +367,10 @@
       bottom: 0;
     }
 
-    .table-wrap { overflow: auto; }
+    .table-wrap {
+      overflow-x: auto;
+      overflow-y: visible;
+    }
     table { width: 100%; border-collapse: collapse; min-width: 980px; }
     th, td { padding: 12px 14px; border-bottom: 1px solid #edf1f6; text-align: right; font-size: 13px; white-space: nowrap; }
     th:first-child, td:first-child { text-align: left; }
@@ -380,6 +383,7 @@
       box-shadow: 0 8px 18px rgba(23, 35, 52, 0.08);
     }
     .metric-header-float.is-floating {
+      display: block;
       position: fixed;
       z-index: 11;
       border-left: 1px solid var(--line);
@@ -624,6 +628,7 @@
       updateFloatingTableHeader();
     }, 120));
     window.addEventListener("scroll", updateFloatingTableHeader, { passive: true });
+    document.querySelector(".table-wrap")?.addEventListener("scroll", updateFloatingTableHeader, { passive: true });
 
     function currentData() { return clients[state.client][state.mode]; }
     function currentCampaignData() {
@@ -959,7 +964,8 @@
       const panel = document.querySelector(".table-panel");
       const header = panel?.querySelector(".panel-header");
       const spacer = document.getElementById("tableHeaderSpacer");
-      if (!panel || !header || !spacer) return;
+      const metricHeader = document.getElementById("metricHeaderFloat");
+      if (!panel || !header || !spacer || !metricHeader) return;
 
       header.classList.remove("is-floating", "is-bottom");
       header.style.top = "";
@@ -967,6 +973,7 @@
       header.style.width = "";
       spacer.style.display = "none";
       spacer.style.height = "";
+      resetMetricHeaderFloat(metricHeader);
 
       const panelRect = panel.getBoundingClientRect();
       const headerHeight = header.offsetHeight;
@@ -987,6 +994,56 @@
         spacer.style.height = `${headerHeight}px`;
         header.classList.add("is-bottom");
       }
+
+      updateMetricHeaderFloat(panel, metricHeader, topOffset, headerHeight);
+    }
+
+    function resetMetricHeaderFloat(metricHeader) {
+      metricHeader.classList.remove("is-floating");
+      metricHeader.style.top = "";
+      metricHeader.style.left = "";
+      metricHeader.style.width = "";
+      metricHeader.style.height = "";
+      const cloneTable = metricHeader.querySelector("table");
+      if (cloneTable) {
+        cloneTable.style.width = "";
+        cloneTable.style.marginLeft = "";
+      }
+    }
+
+    function updateMetricHeaderFloat(panel, metricHeader, topOffset, headerHeight) {
+      const tableWrap = panel.querySelector(".table-wrap");
+      const sourceTable = tableWrap?.querySelector("table");
+      const sourceHeaderRow = sourceTable?.querySelector("thead tr");
+      const targetHeaderRow = document.getElementById("metricHeaderFloatRow");
+      if (!tableWrap || !sourceTable || !sourceHeaderRow || !targetHeaderRow) return;
+
+      const wrapRect = tableWrap.getBoundingClientRect();
+      const tableRect = sourceTable.getBoundingClientRect();
+      const sourceHeaderRect = sourceHeaderRow.getBoundingClientRect();
+      const stickyTop = topOffset + headerHeight;
+      const shouldFloat = sourceHeaderRect.top < stickyTop && tableRect.bottom - sourceHeaderRect.height > stickyTop;
+      if (!shouldFloat) return;
+
+      const sourceCells = Array.from(sourceHeaderRow.children);
+      targetHeaderRow.innerHTML = sourceCells.map((cell) => `<th>${cell.textContent}</th>`).join("");
+      const targetCells = Array.from(targetHeaderRow.children);
+      sourceCells.forEach((cell, index) => {
+        const width = cell.getBoundingClientRect().width;
+        targetCells[index].style.width = `${width}px`;
+        targetCells[index].style.minWidth = `${width}px`;
+        targetCells[index].style.maxWidth = `${width}px`;
+      });
+
+      const cloneTable = metricHeader.querySelector("table");
+      cloneTable.style.width = `${sourceTable.offsetWidth}px`;
+      cloneTable.style.marginLeft = `${-tableWrap.scrollLeft}px`;
+
+      metricHeader.classList.add("is-floating");
+      metricHeader.style.top = `${stickyTop}px`;
+      metricHeader.style.left = `${wrapRect.left}px`;
+      metricHeader.style.width = `${wrapRect.width}px`;
+      metricHeader.style.height = `${sourceHeaderRect.height}px`;
     }
 
     function renderChart(canvasId, rows, series, options = {}, hoverIndex = null) {
