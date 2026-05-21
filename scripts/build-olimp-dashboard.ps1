@@ -516,13 +516,8 @@ $html = $html.Replace('if (!rows.length) return "период";', 'if (!rows.len
       if (state.quickRange === "last-week") return `последняя неделя: ${rows[0].period}`;
       if (state.quickRange === "last-2-weeks") return "последние 2 недели";
       if (state.quickRange === "last-month") return `последний месяц: ${rows[0].period}`;')
-$html = $html.Replace('    renderYearButtons();
-    updateWeekFilter();
-    render();', '    initializeDefaultPeriod();
-    renderYearButtons();
-    updateWeekFilter();
-    render();')
-$html = [regex]::Replace($html, '\s+renderYearButtons\(\);\s+updateWeekFilter\(\);\s+render\(\);', "`r`n    initializeDefaultPeriod();`r`n    renderYearButtons();`r`n    updateWeekFilter();`r`n    render();", 1)
+$html = $html.Replace("updateQuickRangeButtons();`r`n        initializeDefaultPeriod();`r`n        renderYearButtons();", "updateQuickRangeButtons();`r`n        renderYearButtons();")
+$html = [regex]::Replace($html, '\s*(?:initializeDefaultPeriod\(\);\s*)?renderYearButtons\(\);\s*updateWeekFilter\(\);\s*render\(\);\s*</script>', "`r`n    initializeDefaultPeriod();`r`n    renderYearButtons();`r`n    updateWeekFilter();`r`n    render();`r`n  </script>", 1)
 
 $resolvedOutput = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputPath)
 [IO.File]::WriteAllText($resolvedOutput, $html, [Text.UTF8Encoding]::new($false))
