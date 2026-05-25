@@ -2,7 +2,8 @@
   [string]$SpreadsheetId = "1GIvNz_RrA0tMMU9hJ33aotnLgIcv9m4CM8xn_rmZ_oE",
   [string]$Gid = "1880532691",
   [string]$OutputPath = ".\olimpiyskaya-derevnya-dashboard.html",
-  [string]$TemplatePath = ".\titan-tokos-dashboard.html"
+  [string]$TemplatePath = ".\titan-tokos-dashboard.html",
+  [string]$CsvPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -301,29 +302,64 @@ function Set-RegexOnce($Text, $Pattern, $Replacement, $ErrorMessage) {
   return [regex]::Replace($Text, $Pattern, $Replacement, 1)
 }
 
-$tempFile = Join-Path $env:TEMP "dashboard-olimp-$([guid]::NewGuid()).csv"
-try {
-  $url = "https://docs.google.com/spreadsheets/d/$SpreadsheetId/export?format=csv&gid=$Gid"
-  Invoke-WebRequest -Uri $url -OutFile $tempFile -UseBasicParsing
-  $parsed = Parse-OlimpSheet $tempFile
-}
-finally {
-  if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
+function Read-ExistingDashboardData([string]$Path) {
+  if (-not (Test-Path -LiteralPath $Path)) { return $null }
+
+  $resolved = Resolve-Path -LiteralPath $Path
+  $htmlText = [IO.File]::ReadAllText($resolved, [Text.Encoding]::UTF8)
+
+  $clientsMatch = [regex]::Match($htmlText, '(?s)\bconst clients = (.*?);\s+const clientLabels =')
+  if (-not $clientsMatch.Success) { throw "Не найден блок const clients в $Path" }
+  $labelsMatch = [regex]::Match($htmlText, '(?s)\bconst clientLabels = (.*?);\s+const colors =')
+  if (-not $labelsMatch.Success) { throw "Не найден блок const clientLabels в $Path" }
+
+  $existingClients = $clientsMatch.Groups[1].Value | ConvertFrom-Json
+  $existingLabels = $labelsMatch.Groups[1].Value | ConvertFrom-Json
+
+  return @{ clients = $existingClients; labels = $existingLabels }
 }
 
-$monthly = Build-MonthlyRows $parsed.weekly
-$campaignsMonthly = Build-MonthlyRows $parsed.campaignsWeekly -ByCampaign
-$clients = [ordered]@{
-  olimp = [ordered]@{
-    weekly = $parsed.weekly
-    monthly = $monthly
-    yearly = Build-YearlyRows $monthly
-    campaignsWeekly = $parsed.campaignsWeekly
-    campaignsMonthly = $campaignsMonthly
-    campaignsYearly = Build-YearlyRows $campaignsMonthly -ByCampaign
+$parsed = $null
+$clients = $null
+$labels = $null
+
+if ($CsvPath -and (Test-Path -LiteralPath $CsvPath)) {
+  $parsed = Parse-OlimpSheet (Resolve-Path -LiteralPath $CsvPath)
+}
+
+if (-not $parsed) {
+  $tempFile = Join-Path $env:TEMP "dashboard-olimp-$([guid]::NewGuid()).csv"
+  try {
+    $url = "https://docs.google.com/spreadsheets/d/$SpreadsheetId/export?format=csv&gid=$Gid"
+    Invoke-WebRequest -Uri $url -OutFile $tempFile -UseBasicParsing
+    $parsed = Parse-OlimpSheet $tempFile
+  }
+  catch {
+    $existing = Read-ExistingDashboardData $OutputPath
+    if (-not $existing) { throw }
+    $clients = $existing.clients
+    $labels = $existing.labels
+  }
+  finally {
+    if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
   }
 }
-$labels = [ordered]@{ olimp = 'База отдыха "Олимпийская деревня"' }
+
+if (-not $clients) {
+  $monthly = Build-MonthlyRows $parsed.weekly
+  $campaignsMonthly = Build-MonthlyRows $parsed.campaignsWeekly -ByCampaign
+  $clients = [ordered]@{
+    olimp = [ordered]@{
+      weekly = $parsed.weekly
+      monthly = $monthly
+      yearly = Build-YearlyRows $monthly
+      campaignsWeekly = $parsed.campaignsWeekly
+      campaignsMonthly = $campaignsMonthly
+      campaignsYearly = Build-YearlyRows $campaignsMonthly -ByCampaign
+    }
+  }
+  $labels = [ordered]@{ olimp = 'База отдыха "Олимпийская деревня"' }
+}
 
 $resolvedTemplate = Resolve-Path $TemplatePath
 $html = [IO.File]::ReadAllText($resolvedTemplate, [Text.Encoding]::UTF8)
@@ -523,8 +559,8 @@ $resolvedOutput = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathF
 [IO.File]::WriteAllText($resolvedOutput, $html, [Text.UTF8Encoding]::new($false))
 
 Write-Host "Дашборд создан: $resolvedOutput"
-Write-Host "Недель: $($parsed.weekly.Count)"
-Write-Host "Месяцев: $($monthly.Count)"
+Write-Host "Недель: $($clients.olimp.weekly.Count)"
+Write-Host "Месяцев: $($clients.olimp.monthly.Count)"
 Write-Host "Годов: $($clients.olimp.yearly.Count)"
 
 
