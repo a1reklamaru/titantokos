@@ -295,10 +295,30 @@ if (-not $status) {
 Write-Host "Данные обновлены в titan-tokos-dashboard.html"
 if ($NoCommit) { exit 0 }
 
+function Test-CanWriteGitDir() {
+  $gitDir = Join-Path $PSScriptRoot "..\.git"
+  if (-not (Test-Path -LiteralPath $gitDir)) { return $false }
+  $probe = Join-Path $gitDir "__codex_write_probe.tmp"
+  try {
+    New-Item -ItemType File -LiteralPath $probe -Force -ErrorAction Stop | Out-Null
+    Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue
+    return $true
+  }
+  catch {
+    return $false
+  }
+}
+
+if (-not (Test-CanWriteGitDir)) {
+  Write-Warning "Нет прав записи в .git: пропускаю git add/commit/push."
+  exit 0
+}
+
 git add titan-tokos-dashboard.html
 git -c user.name="a1reklamaru" -c user.email="a1reklamaru@users.noreply.github.com" commit -m "Update dashboard data"
 
 if (-not $NoPush) {
-  git push
+  try { git push }
+  catch { Write-Warning "git push: $($_.Exception.Message)" }
 }
 
