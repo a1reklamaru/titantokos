@@ -3,7 +3,8 @@
   [string]$Gid = "1880532691",
   [string]$OutputPath = ".\olimpiyskaya-derevnya-dashboard.html",
   [string]$TemplatePath = ".\titan-tokos-dashboard.html",
-  [string]$CsvPath = ""
+  [string]$CsvPath = "",
+  [string]$CachePath = ".\.cache\olimp-sheet.csv"
 )
 
 $ErrorActionPreference = "Stop"
@@ -333,12 +334,25 @@ if (-not $parsed) {
     $url = "https://docs.google.com/spreadsheets/d/$SpreadsheetId/export?format=csv&gid=$Gid"
     Invoke-WebRequest -Uri $url -OutFile $tempFile -UseBasicParsing
     $parsed = Parse-OlimpSheet $tempFile
+
+    if ($CachePath) {
+      $cacheDir = Split-Path -Parent $CachePath
+      if ($cacheDir -and -not (Test-Path -LiteralPath $cacheDir)) {
+        New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
+      }
+      Copy-Item -LiteralPath $tempFile -Destination $CachePath -Force
+    }
   }
   catch {
-    $existing = Read-ExistingDashboardData $OutputPath
-    if (-not $existing) { throw }
-    $clients = $existing.clients
-    $labels = $existing.labels
+    if ($CachePath -and (Test-Path -LiteralPath $CachePath)) {
+      $parsed = Parse-OlimpSheet (Resolve-Path -LiteralPath $CachePath)
+    }
+    else {
+      $existing = Read-ExistingDashboardData $OutputPath
+      if (-not $existing) { throw }
+      $clients = $existing.clients
+      $labels = $existing.labels
+    }
   }
   finally {
     if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
